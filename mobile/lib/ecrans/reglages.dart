@@ -110,9 +110,9 @@ class _CetAppareil extends StatelessWidget {
       LigneReglage(ico: Ico.repere, libelle: 'Adresse privée', valeur: moi.adresse, valeurMono: true, dense: true),
       LigneReglage(
         ico: Ico.bouclier,
-        couleurIco: jours > 14 ? Couleurs.vert : Couleurs.rouge,
+        couleurIco: !moi.signe ? Couleurs.tertiaire : jours > 14 ? Couleurs.vert : Couleurs.rouge,
         libelle: 'Certificat',
-        valeur: 'encore $jours j',
+        valeur: moi.signe ? 'encore $jours j' : r.serveurInjoignable ? 'serveur injoignable' : 'pas encore signé',
         dense: true,
       ),
       LigneReglage(

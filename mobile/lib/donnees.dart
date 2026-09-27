@@ -305,6 +305,10 @@ class Reseau extends ChangeNotifier {
   /// La dernière erreur du moteur, à afficher.
   String erreur = '';
 
+  /// Tunnel coupé, l'API n'a pas répondu à la dernière question : ce que
+  /// l'appli sait du réseau (et de son propre certificat) peut être périmé.
+  bool serveurInjoignable = false;
+
   DateTime debutConnexion = DateTime.now().subtract(const Duration(hours: 2, minutes: 14));
   String serveur = 'vpn.exemple.fr';
   String cleVerrou = '';
@@ -526,8 +530,10 @@ class Reseau extends ChangeNotifier {
     if (pairs.isEmpty && (_tours % 3 == 0 || appareils.isEmpty)) {
       try {
         pairs = ((await Moteur.reseau())['pairs'] as List? ?? []).cast<Map<String, dynamic>>();
+        serveurInjoignable = false;
       } on ErreurMoteur {
-        // Serveur injoignable : on garde ce qu'on sait.
+        // Serveur injoignable : on garde ce qu'on sait, et on le dit.
+        serveurInjoignable = true;
       }
     }
     if (pairs.isNotEmpty) {
@@ -846,7 +852,7 @@ String duree(Duration d) {
 }
 
 /// La version affichée dans « À propos » (même valeur que pubspec.yaml).
-const versionAppli = '0.6.2';
+const versionAppli = '0.6.3';
 
 /// « tristan.joncour@gmail.com » → « Tristan » : de quoi nommer quelqu'un
 /// sans son nom complet.

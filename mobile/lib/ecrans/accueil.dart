@@ -176,6 +176,8 @@ class _CarteEtat extends StatelessWidget {
     // l'interrupteur reste fermé à clé.
     final bloque = r.nonSigne && !on;
     final (etat, sous) = switch ((on, attente)) {
+      // Sans réponse du serveur, on ne sait pas s'il a été signé entre-temps.
+      (false, false) when r.serveurInjoignable && r.erreur.isEmpty => ('Hors ligne', 'serveur injoignable'),
       (false, false) when bloque => ('Verrouillé', 'en attente de signature'),
       (true, true) => ('Connexion…', 'ouverture du tunnel'),
       (false, true) => ('Coupure…', 'fermeture du tunnel'),
@@ -292,6 +294,8 @@ class _CarteAppareil extends StatelessWidget {
             Expanded(
               child: moi.signe
                   ? garantie(Ico.bouclier, Couleurs.cyan, 'Verrou vérifié', "Signé par l'admin")
+                  : r.serveurInjoignable
+                  ? garantie(Ico.bouclier, Couleurs.tertiaire, 'Serveur injoignable', 'signature à vérifier')
                   : garantie(Ico.empreinte, Couleurs.rouge, 'En attente de signature', moi.certificat.empreinte.join('-')),
             ),
           ]),

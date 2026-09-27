@@ -608,11 +608,19 @@ class LigneReglage extends StatelessWidget {
           ),
           if (valeur != null) ...[
             const SizedBox(width: 10),
-            Text(
-              valeur!,
-              style: valeurMono
-                  ? mono(13.5, graisse: 400, couleur: Couleurs.etiquette)
-                  : texte(13.5, couleur: Couleurs.etiquette),
+            // Une valeur longue (nom, serveur) se coupe au lieu de pousser
+            // le libellé hors de la ligne.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.45),
+              child: Text(
+                valeur!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: valeurMono
+                    ? mono(13.5, graisse: 400, couleur: Couleurs.etiquette)
+                    : texte(13.5, couleur: Couleurs.etiquette),
+              ),
             ),
           ],
           if (fin != null) ...[const SizedBox(width: 8), fin!],
@@ -709,24 +717,30 @@ class Coins extends CustomPainter {
 
 /// Tout doit tenir dans la hauteur visible : si le contenu déborde (petit
 /// écran, grande police), il est réduit au lieu de défiler.
-class SansDefilement extends StatelessWidget {
+class SansDefilement extends StatefulWidget {
   const SansDefilement({super.key, required this.child, this.alignement = Alignment.topCenter});
   final Widget child;
   final Alignment alignement;
 
   @override
+  State<SansDefilement> createState() => _SansDefilementState();
+}
+
+class _SansDefilementState extends State<SansDefilement> {
+  // Le contenu change de parent quand le clavier s'ouvre : sans cette clé
+  // il serait recréé, et le champ touché perdrait le clavier aussitôt.
+  final _contenu = GlobalKey();
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, c) => View.of(context).viewInsets.bottom > 0
-        // Clavier ouvert, la hauteur fond : réduire rendrait tout
-        // minuscule. On défile, à taille normale.
-        ? SingleChildScrollView(
-            child: SizedBox(width: c.maxWidth, child: child),
-          )
-        : FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: alignement,
-            child: SizedBox(width: c.maxWidth, child: child),
-          ),
+    builder: (context, c) {
+      final contenu = SizedBox(width: c.maxWidth, child: KeyedSubtree(key: _contenu, child: widget.child));
+      return View.of(context).viewInsets.bottom > 0
+          // Clavier ouvert, la hauteur fond : réduire rendrait tout
+          // minuscule. On défile, à taille normale.
+          ? SingleChildScrollView(child: contenu)
+          : FittedBox(fit: BoxFit.scaleDown, alignment: widget.alignement, child: contenu);
+    },
   );
 }
 

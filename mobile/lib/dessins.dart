@@ -508,7 +508,12 @@ class _PeintreTopologie extends CustomPainter {
     final reseau = _Lien.reseau.transform(v);
     final paquets = _Lien.paquets.transform(v);
     final c = Offset(w / 2, h * 0.5);
-    final autres = appareils.where((a) => a.type != TypeAppareil.serveur).take(8).toList();
+    // Huit places au plus, dans l'ordre du réseau ; cet appareil n'en sort
+    // jamais, il prend la dernière si besoin.
+    final tous = appareils.where((a) => a.type != TypeAppareil.serveur).toList();
+    final autres = tous.take(8).toList();
+    final moi = tous.where((a) => a.moi);
+    if (moi.isNotEmpty && !autres.contains(moi.first)) autres[autres.length - 1] = moi.first;
     final places = _places(autres.length, c, w, h);
 
     // Grille.

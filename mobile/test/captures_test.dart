@@ -13,6 +13,7 @@ import 'package:cybersas/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _polices() async {
   for (final famille in ['Syne', 'SpaceGrotesk', 'JetBrainsMono']) {
@@ -46,7 +47,10 @@ Future<void> _ouvrir(WidgetTester t, Size taille, Reseau r) async {
 }
 
 void main() {
-  setUpAll(_polices);
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    await _polices();
+  });
 
   for (final f in _formats.entries) {
     for (final (onglet, nom) in [(0, 'accueil'), (1, 'appareils'), (2, 'reglages')]) {
@@ -109,9 +113,12 @@ void main() {
   testWidgets('telephone verrou', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true)..verrouAppli = true);
-    // L'entrée du logo, puis la demande d'empreinte (1,5 s).
-    await _attendre(t, 2000);
+    // L'entrée du logo, juste avant la demande d'empreinte (1,5 s) : en
+    // test, pas d'empreinte, et l'appli s'ouvrirait d'elle-même.
+    await _attendre(t, 1400);
     await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-verrou.png'));
+    // La demande d'empreinte part ensuite : on la laisse finir.
+    await _attendre(t, 800);
   });
 
   testWidgets('telephone renommer', (t) async {

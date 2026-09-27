@@ -73,13 +73,15 @@ class _Compte extends StatelessWidget {
         halo: haloCarte(),
         padding: const EdgeInsets.fromLTRB(15, 12, 15, 12),
         child: Row(children: [
-          Avatar(lettre: r.compte[0], taille: 42, plein: true),
+          Avatar(lettre: r.compte.isEmpty ? '?' : r.compte[0], taille: 42, plein: true),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(r.compte, style: texte(16, graisse: 600)),
+              Text(r.compte, style: texte(16, graisse: 600), maxLines: 1, overflow: TextOverflow.ellipsis),
               const SizedBox(height: 2),
-              Text('Connecté avec Google', style: texte(12.5, couleur: Couleurs.secondaire)),
+              // Le compte de l'inscription ; la connexion Google n'existe pas encore.
+              Text(r.courriel.isNotEmpty ? r.courriel : "Invité par l'admin",
+                  style: texte(12.5, couleur: Couleurs.secondaire), maxLines: 1, overflow: TextOverflow.ellipsis),
             ]),
           ),
           if (r.admin) const Puce('ADMIN', couleur: Couleurs.texte, fond: false),
@@ -110,9 +112,18 @@ class _CetAppareil extends StatelessWidget {
       LigneReglage(ico: Ico.repere, libelle: 'Adresse privée', valeur: moi.adresse, valeurMono: true, dense: true),
       LigneReglage(
         ico: Ico.bouclier,
-        couleurIco: !moi.signe ? Couleurs.tertiaire : jours > 14 ? Couleurs.vert : Couleurs.rouge,
+        couleurIco: switch (moi.etatCertificat) {
+          EtatCertificat.signe => !moi.certificat.finConnue || jours > 14 ? Couleurs.vert : Couleurs.rouge,
+          EtatCertificat.attente => Couleurs.tertiaire,
+          _ => Couleurs.rouge,
+        },
         libelle: 'Certificat',
-        valeur: moi.signe ? 'encore $jours j' : r.serveurInjoignable ? 'serveur injoignable' : 'pas encore signé',
+        valeur: switch (moi.etatCertificat) {
+          EtatCertificat.signe => !moi.certificat.finConnue ? 'signé' : jours > 1 ? 'encore $jours j' : "moins d'un jour",
+          EtatCertificat.revoque => 'révoqué',
+          EtatCertificat.expire => 'expiré',
+          EtatCertificat.attente => r.serveurInjoignable ? 'serveur injoignable' : 'pas encore signé',
+        },
         dense: true,
       ),
       LigneReglage(
@@ -405,6 +416,9 @@ class _Quitter extends StatelessWidget {
         ),
       ),
     );
-    if (oui == true) r.quitter();
+    if (oui != true || !context.mounted) return;
+    final messager = ScaffoldMessenger.of(context);
+    final erreur = await r.quitter();
+    if (erreur != null) messager.showSnackBar(SnackBar(content: Text(erreur)));
   }
 }

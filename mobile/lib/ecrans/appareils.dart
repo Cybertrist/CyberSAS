@@ -60,7 +60,7 @@ class _Titre extends StatelessWidget {
             TextSpan(children: [
               TextSpan(text: r.plage),
               const TextSpan(text: '  ·  '),
-              if (r.connecte) ...[
+              if (r.enService) ...[
                 TextSpan(text: '${r.enLigne} en ligne', style: mono(12.5, graisse: 400, couleur: Couleurs.vert)),
                 TextSpan(text: ' sur ${r.appareils.length}'),
               ] else
@@ -88,7 +88,7 @@ class _CarteReseau extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: Couleurs.bordure),
         ),
-        child: Topologie(appareils: r.appareils, grand: grand, connecte: r.connecte),
+        child: Topologie(appareils: r.appareils, grand: grand, connecte: r.enService),
       );
 }
 
@@ -132,7 +132,15 @@ class BoutonAjouter extends StatelessWidget {
   final double hauteur;
 
   @override
-  Widget build(BuildContext context) => Bordee(
+  Widget build(BuildContext context) {
+    final r = EtatReseau.of(context);
+    // Seul un admin invite : pour les autres, le bouton ne mènerait qu'à
+    // un refus.
+    if (r.reel && !r.admin) return const SizedBox.shrink();
+    return _bouton(context);
+  }
+
+  Widget _bouton(BuildContext context) => Bordee(
         bordure: Bords.cyan,
         fond: const Color(0xF20A121A),
         rayon: 16,
@@ -151,8 +159,11 @@ class BoutonAjouter extends StatelessWidget {
 
 String _titreGroupe(Reseau r, String p) {
   if (p == 'admin') return 'Machines du réseau';
-  if (p == r.compte.toLowerCase()) return 'Mes appareils';
-  return 'Appareils de ${p[0].toUpperCase()}${p.substring(1)}';
+  if (p == r.courriel.toLowerCase() || p == r.compte.toLowerCase()) return 'Mes appareils';
+  if (p.isEmpty) return 'Autres appareils';
+  final n = prenom(p);
+  // « d'Essai », « d'Ana » ; « de Léa ».
+  return RegExp(r'^[aeiouyhàâéèêîôûAEIOUYHÀÂÉÈÊÎÔÛ]').hasMatch(n) ? "Appareils d'$n" : 'Appareils de $n';
 }
 
 // ─── Compact : téléphone et écran extérieur ─────────────────────────────
@@ -246,7 +257,7 @@ class _Ligne extends StatelessWidget {
             ),
           ),
           child: Row(children: [
-            CaseIcone(a.type.ico, couleur: a.couleur, etat: a.enLigne && EtatReseau.of(context).connecte ? EtatIcone.enLigne : EtatIcone.horsLigne, taille: 38),
+            CaseIcone(a.type.ico, couleur: a.couleur, etat: a.enLigne && EtatReseau.of(context).enService ? EtatIcone.enLigne : EtatIcone.horsLigne, taille: 38),
             const SizedBox(width: 13),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -268,7 +279,7 @@ class _Ligne extends StatelessWidget {
             for (final p in a.ports) ...[const SizedBox(width: 4), PucePort(p)],
             const SizedBox(width: 10),
             // Tunnel coupé : d'ici, on ne sait plus qui est en ligne.
-            _Point(a.enLigne && EtatReseau.of(context).connecte),
+            _Point(a.enLigne && EtatReseau.of(context).enService),
             if (chevron) ...[const SizedBox(width: 6), const Chevron()],
           ]),
         ),
@@ -375,7 +386,8 @@ class _PaysageState extends State<_Paysage> {
         const SizedBox(height: 12),
         const BoutonAjouter(),
       ]);
-      droite = PanneauDetail(a: r.parAdresse(ouvert), disposition: Disposition.colonne);
+      final a = r.parAdresse(ouvert);
+      droite = a == null ? const AppareilParti() : PanneauDetail(a: a, disposition: Disposition.colonne);
     }
 
     return PopScope(

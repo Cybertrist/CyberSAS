@@ -183,7 +183,7 @@ class _Etapes extends StatelessWidget {
   Widget build(BuildContext context) {
     const etapes = [
       ('Installer CyberSAS', 'Sur le nouvel appareil'),
-      ('Scanner ou saisir le code', 'Le nouvel appareil crée sa propre clé'),
+      ("Ouvrir le lien d'invitation", 'Le nouvel appareil crée sa propre clé'),
       ("Signature sur le téléphone de l'admin", "Après vérification de l'empreinte"),
     ];
     return Carte(

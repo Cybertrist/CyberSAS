@@ -11,8 +11,12 @@ import '../theme.dart';
 /// pourquoi. Le code du téléphone est accepté aussi : un doigt mouillé ne
 /// doit pas fermer la porte.
 class EcranVerrou extends StatefulWidget {
-  const EcranVerrou({super.key, required this.deverrouiller});
+  const EcranVerrou({super.key, required this.deverrouiller, required this.sansCode});
   final VoidCallback deverrouiller;
+
+  /// Le téléphone n'a ni empreinte ni code : le verrou ne protège rien et
+  /// enfermerait dehors. On le retire, et on ouvre.
+  final VoidCallback sansCode;
 
   @override
   State<EcranVerrou> createState() => _EcranVerrouState();
@@ -49,6 +53,10 @@ class _EcranVerrouState extends State<EcranVerrou> with SingleTickerProviderStat
     if (!mounted) return;
     if (ok == Identite.confirmee) {
       widget.deverrouiller();
+      return;
+    }
+    if (ok == Identite.impossible) {
+      widget.sansCode();
       return;
     }
     setState(() {

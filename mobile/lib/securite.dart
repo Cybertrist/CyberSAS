@@ -19,6 +19,10 @@ final _auth = LocalAuthentication();
 
 /// Ouvre l'invite biométrique d'Android. [biometrieSeule] : refuse le code
 /// du téléphone, il faut le doigt (c'est le cas pour signer).
+/// À afficher quand une action demande le doigt et que le téléphone n'a
+/// pas d'empreinte enregistrée.
+const sansEmpreinte = "Enregistre une empreinte dans les réglages d'Android : cette action la demande.";
+
 Future<Identite> confirmerIdentite(String raison, {bool biometrieSeule = true}) async {
   try {
     final ok = await _auth.authenticate(

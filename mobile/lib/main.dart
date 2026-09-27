@@ -170,7 +170,13 @@ class _GardeState extends State<_Garde> with WidgetsBindingObserver {
             removeBottom: true,
             // Le geste retour est arrêté par _BarrageRetour : un PopScope,
             // ici au-dessus du Navigator, n'aurait pas de route à retenir.
-            child: EcranVerrou(deverrouiller: () => setState(() => _verrouillee = false)),
+            child: EcranVerrou(
+              deverrouiller: () => setState(() => _verrouillee = false),
+              sansCode: () {
+                r.reglerVerrou(false);
+                setState(() => _verrouillee = false);
+              },
+            ),
           ),
         ),
       if (_voile && r.verrouAppli && r.inscrit) const Positioned.fill(child: ColoredBox(color: Couleurs.fond)),

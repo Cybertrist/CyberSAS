@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'icones.dart';
@@ -26,16 +26,24 @@ enum TypeAppareil {
   final Ico ico;
 }
 
+/// Où en est le certificat d'un appareil, pour le dire sans mentir.
+enum EtatCertificat { signe, attente, revoque, expire }
+
 class Certificat {
-  const Certificat({required this.debut, required this.fin, required this.empreinte});
+  const Certificat({required this.debut, required this.fin, required this.empreinte, this.finConnue = true});
   final DateTime debut;
   final DateTime fin;
+
+  /// Faux quand le moteur n'a donné aucune date : fin ne veut rien dire.
+  final bool finConnue;
 
   /// Les 12 premiers caractères du hash de la clé publique, en base64url,
   /// affichés en 3 blocs de 4.
   final List<String> empreinte;
 
-  int joursRestants(DateTime maintenant) => fin.difference(maintenant).inDays.clamp(0, 99999);
+  /// Arrondi au jour supérieur : un certificat qui expire dans 3 jours
+  /// moins une heure dit « 3 j », et « 0 » veut vraiment dire expiré.
+  int joursRestants(DateTime maintenant) => (fin.difference(maintenant).inMinutes / (24 * 60)).ceil().clamp(0, 99999);
 
   double progression(DateTime maintenant) {
     final total = fin.difference(debut).inSeconds;
@@ -106,7 +114,20 @@ class Appareil {
   /// suffixe (« fold8-tristan ») : il ne peut pas se faire passer pour
   /// « serveur ». Les machines de l'admin n'en ont pas. Même règle que
   /// NomPersonnel côté serveur.
-  String get suffixe => proprietaire == 'admin' ? '' : '-$proprietaire';
+  String get suffixe => proprietaire == 'admin' ? '' : '-${nomPropre(proprietaire.split('@').first)}';
+
+  /// Le propriétaire tel qu'on l'affiche : « Admin », ou son prénom.
+  /// proprietaire, lui, est l'adresse : deux Tristan restent deux.
+  /// Signé, en attente, révoqué ou expiré, d'après ce que le moteur a
+  /// vérifié (signe, raison) et la date du certificat.
+  EtatCertificat get etatCertificat {
+    if (signe) return EtatCertificat.signe;
+    if (raison.contains('révoqué')) return EtatCertificat.revoque;
+    if (certificat.finConnue && certificat.fin.isBefore(DateTime.now())) return EtatCertificat.expire;
+    return EtatCertificat.attente;
+  }
+
+  String get nomProprietaire => proprietaire == 'admin' ? 'Admin' : prenom(proprietaire);
 
   /// La partie du nom qu'on peut changer.
   String get prefixe => suffixe.isNotEmpty && nom.endsWith(suffixe) ? nom.substring(0, nom.length - suffixe.length) : nom;
@@ -163,7 +184,7 @@ class Appareil {
       adresse: j['adresse'] as String? ?? '',
       type: type,
       // Les machines (serveur, maison) sont celles de l'admin.
-      proprietaire: serveur || etiquette.isNotEmpty ? 'admin' : prenom(email).toLowerCase(),
+      proprietaire: serveur || etiquette.isNotEmpty ? 'admin' : email.toLowerCase(),
       enLigne: j['en_ligne'] == true,
       moi: j['moi'] == true,
       signe: j['signe'] != false,
@@ -177,6 +198,7 @@ class Appareil {
         // Le verrou signe pour 90 jours par défaut.
         debut: (expire ?? DateTime.now()).subtract(const Duration(days: 90)),
         fin: expire ?? DateTime.now(),
+        finConnue: expire != null,
         empreinte: (j['empreinte'] as String? ?? '').split('-'),
       ),
     );
@@ -305,6 +327,26 @@ class Reseau extends ChangeNotifier {
   /// La dernière erreur du moteur, à afficher.
   String erreur = '';
 
+  /// Une erreur de l'appli elle-même (autorisation VPN refusée, moteur
+  /// qui refuse de démarrer) : le relevé suivant ne l'efface pas, seul le
+  /// prochain appui sur l'interrupteur le fait.
+  String erreurLocale = '';
+
+  /// Ce que la carte d'état affiche comme erreur.
+  String get erreurAffichee => erreurLocale.isNotEmpty ? erreurLocale : erreur;
+
+  /// Le tunnel est ouvert ET le serveur répond : c'est seulement là que
+  /// les autres appareils sont joignables.
+  bool get enService => connecte && serveurJoint;
+
+  /// Au-delà de ce délai sans session, « Connexion… » devient « serveur
+  /// injoignable ».
+  static const delaiConnexion = Duration(seconds: 20);
+
+  /// Tunnel ouvert, mais toujours pas de serveur après le délai.
+  bool get tunnelEnPanne =>
+      connecte && !serveurJoint && !enTransition && DateTime.now().difference(debutConnexion) > delaiConnexion;
+
   /// Tunnel coupé, l'API n'a pas répondu à la dernière question : ce que
   /// l'appli sait du réseau (et de son propre certificat) peut être périmé.
   bool serveurInjoignable = false;
@@ -393,18 +435,34 @@ class Reseau extends ChangeNotifier {
   int get enLigne => appareils.where((a) => a.enLigne).length;
   int get horsLigne => appareils.length - enLigne;
 
-  /// Les appareils rangés par propriétaire, l'admin d'abord.
+  /// Les appareils rangés par propriétaire : les machines, les miens, les
+  /// autres par ordre alphabétique, ceux sans propriétaire à la fin.
   Map<String, List<Appareil>> get parProprietaire {
     final m = <String, List<Appareil>>{};
     for (final a in appareils) {
       (m[a.proprietaire] ??= []).add(a);
     }
-    final cles = m.keys.toList()..sort((a, b) => a == 'admin' ? -1 : (b == 'admin' ? 1 : a.compareTo(b)));
+    int rang(String p) => p == 'admin'
+        ? 0
+        : p == courriel.toLowerCase() || p == compte.toLowerCase()
+            ? 1
+            : p.isEmpty
+                ? 3
+                : 2;
+    final cles = m.keys.toList()..sort((a, b) => rang(a) != rang(b) ? rang(a) - rang(b) : a.compareTo(b));
     return {for (final k in cles) k: m[k]!};
   }
 
   Appareil appareil(String nom) => appareils.firstWhere((a) => a.nom == nom, orElse: () => appareils.isEmpty ? moi : appareils.first);
-  Appareil parAdresse(String adresse) => appareils.firstWhere((a) => a.adresse == adresse, orElse: () => appareils.isEmpty ? moi : appareils.first);
+  /// null si l'appareil n'est plus sur le réseau (retiré, révoqué) : on le
+  /// dit, plutôt que de montrer un autre appareil à sa place.
+  Appareil? parAdresse(String adresse) {
+    for (final a in appareils) {
+      if (a.adresse == adresse) return a;
+    }
+    final m = _moiInscrit;
+    return m != null && m.adresse == adresse ? m : null;
+  }
 
   /// Vrai pendant qu'on allume ou coupe le tunnel : l'interrupteur ne
   /// répond plus tant que l'animation (et demain le moteur) n'a pas fini.
@@ -445,24 +503,36 @@ class Reseau extends ChangeNotifier {
   Future<void> _basculerReel(bool v) async {
     if (_demarrage) return;
     erreur = '';
+    erreurLocale = '';
     if (v) {
       // La première fois, Android demande d'autoriser le VPN.
       _demarrage = true;
-      final bool autorise;
+      bool autorise;
       try {
         autorise = await Moteur.demarrer();
+      } on Exception catch (e) {
+        erreurLocale = _messageDe(e, 'Le tunnel ne démarre pas');
+        notifyListeners();
+        return;
       } finally {
         _demarrage = false;
       }
       if (!autorise) {
-        erreur = 'Autorisation VPN refusée';
+        erreurLocale = 'Autorisation VPN refusée';
         notifyListeners();
         return;
       }
-      debutConnexion = DateTime.now();
+      _noterDebut(DateTime.now());
       serveurJoint = false;
+      serveurInjoignable = false;
     } else {
-      await Moteur.arreter();
+      try {
+        await Moteur.arreter();
+      } on Exception catch (e) {
+        erreurLocale = _messageDe(e, 'Le tunnel ne se coupe pas');
+        notifyListeners();
+        return;
+      }
     }
     connecte = v;
     _attendreAnimation();
@@ -470,6 +540,22 @@ class Reseau extends ChangeNotifier {
   }
 
   // ─── Le vrai réseau ───
+
+  static const _cleDebut = 'debut_tunnel';
+  static const _cleAdmin = 'admin';
+
+  /// Le début de la connexion, gardé pour que « Connecté depuis » reste
+  /// juste quand l'appli se rouvre sur un tunnel déjà ouvert.
+  void _noterDebut(DateTime t) {
+    debutConnexion = t;
+    SharedPreferences.getInstance().then((p) => p.setInt(_cleDebut, t.millisecondsSinceEpoch));
+  }
+
+  String _messageDe(Exception e, String defaut) => e is ErreurMoteur
+      ? e.message
+      : e is PlatformException
+          ? ErreurMoteur.lisible(e.message ?? defaut)
+          : defaut;
 
   Timer? _suivi;
 
@@ -483,6 +569,11 @@ class Reseau extends ChangeNotifier {
       return;
     }
     _adopterInscription(i);
+    final p = await SharedPreferences.getInstance();
+    final debut = p.getInt(_cleDebut);
+    debutConnexion = debut == null ? DateTime.now() : DateTime.fromMillisecondsSinceEpoch(debut);
+    // Hors ligne au démarrage, l'appli se souvient qu'elle est admin.
+    admin = p.getBool(_cleAdmin) ?? admin;
     cleVerrouPresente = await Moteur.verrouPresent();
     await _lireEtat();
     _suivi?.cancel();
@@ -503,31 +594,59 @@ class Reseau extends ChangeNotifier {
       libelle: i['libelle'] as String? ?? '',
       adresse: i['adresse'] as String? ?? '',
       type: TypeAppareil.telephone,
-      proprietaire: compte.toLowerCase(),
+      proprietaire: courriel.toLowerCase(),
       suffixeReseau: '-${nomPropre((i['proprietaire'] as String? ?? '').split('@').first)}',
       moi: true,
-      enLigne: true,
+      enLigne: false,
       signe: false,
-      certificat: Certificat(debut: DateTime.now(), fin: DateTime.now(), empreinte: (i['empreinte'] as String? ?? '').split('-')),
+      certificat: Certificat(debut: DateTime.now(), fin: DateTime.now(), finConnue: false, empreinte: (i['empreinte'] as String? ?? '').split('-')),
     );
   }
 
+  /// Vrai pendant un relevé : sans serveur, un appel peut attendre plus
+  /// longtemps que les deux secondes entre deux relevés.
+  bool _enLecture = false;
+
+  /// L'état du tunnel au relevé précédent (null : aucun relevé encore).
+  bool? _enMarcheVu;
+
   Future<void> _lireEtat() async {
+    if (_enLecture) return;
+    _enLecture = true;
+    try {
+      await _relever();
+    } finally {
+      _enLecture = false;
+    }
+  }
+
+  Future<void> _relever() async {
     final Map<String, dynamic> e;
     try {
       e = await Moteur.etat();
     } on Exception {
+      erreur = 'Le moteur ne répond pas';
+      notifyListeners();
       return;
     }
     final enMarche = e['en_marche'] == true;
+    // Un tunnel qu'on a vu coupé, puis ouvert sans nous (service relancé
+    // par Android) : on ne sait pas depuis quand, on part de maintenant.
+    // Au premier relevé, on garde le début enregistré par charger().
+    if (enMarche && _enMarcheVu == false && !enTransition && !_demarrage) _noterDebut(DateTime.now());
+    _enMarcheVu = enMarche;
     // Pendant qu'on change d'état, l'interrupteur a la main.
     if (!enTransition) connecte = enMarche;
     serveurJoint = e['connecte'] == true;
     erreur = e['erreur'] as String? ?? '';
-    var pairs = (e['pairs'] as List? ?? []).cast<Map<String, dynamic>>();
-    // Tunnel coupé : le moteur ne sait rien du réseau, on le demande à
-    // l'API (une fois sur trois, toutes les six secondes).
-    if (pairs.isEmpty && (_tours % 3 == 0 || appareils.isEmpty)) {
+    List<Map<String, dynamic>> pairs = [];
+    if (enMarche) {
+      // Tunnel ouvert : le moteur sait tout, et dit s'il joint le serveur.
+      pairs = (e['pairs'] as List? ?? []).cast<Map<String, dynamic>>();
+      if (serveurJoint) serveurInjoignable = false;
+    } else if (_tours % 3 == 0 || appareils.isEmpty) {
+      // Tunnel coupé : ce que le moteur garde est périmé, on demande à
+      // l'API (une fois sur trois, toutes les six secondes).
       try {
         pairs = ((await Moteur.reseau())['pairs'] as List? ?? []).cast<Map<String, dynamic>>();
         serveurInjoignable = false;
@@ -543,7 +662,10 @@ class Reseau extends ChangeNotifier {
       if (!appareils.any((a) => a.nom == selection)) selection = appareils.first.nom;
       // Admin : d'après le groupe que le verrou a signé pour cet appareil.
       final m = appareils.where((a) => a.moi);
-      if (m.isNotEmpty && m.first.groupe.isNotEmpty) admin = m.first.groupe == 'admins';
+      if (m.isNotEmpty && m.first.groupe.isNotEmpty) {
+        admin = m.first.groupe == 'admins';
+        SharedPreferences.getInstance().then((p) => p.setBool(_cleAdmin, admin));
+      }
     }
     // Les demandes : une fois sur trois (toutes les six secondes).
     if (_tours++ % 3 == 0) await _lireDemandes();
@@ -582,15 +704,30 @@ class Reseau extends ChangeNotifier {
     return null;
   }
 
-  Future<void> quitter() async {
+  /// Quitte le réseau. Rend l'erreur à afficher, ou null.
+  Future<String?> quitter() async {
     if (reel) {
+      try {
+        await Moteur.quitter();
+      } on ErreurMoteur catch (e) {
+        return e.message;
+      }
       _suivi?.cancel();
-      await Moteur.quitter();
       appareils.clear();
+      demandes.clear();
       connecte = false;
+      admin = false;
+      cleVerrouPresente = false;
+      serveurInjoignable = false;
+      erreur = '';
+      erreurLocale = '';
+      final p = await SharedPreferences.getInstance();
+      await p.remove(_cleDebut);
+      await p.remove(_cleAdmin);
     }
     inscrit = false;
     notifyListeners();
+    return null;
   }
 
   /// Refusée : la demande disparaît, rien n'entre dans le réseau. Sur le
@@ -852,13 +989,16 @@ String duree(Duration d) {
 }
 
 /// La version affichée dans « À propos » (même valeur que pubspec.yaml).
-const versionAppli = '0.6.3';
+const versionAppli = '0.7.0';
 
 /// « tristan.joncour@gmail.com » → « Tristan » : de quoi nommer quelqu'un
 /// sans son nom complet.
 String prenom(String email) {
   // Les chiffres de fin ne font pas partie du prénom : « tristan29 ».
-  final p = email.split('@').first.split(RegExp(r'[._+-]')).first.replaceAll(RegExp(r'[0-9]+$'), '');
-  if (p.isEmpty) return '';
+  final local = email.split('@').first;
+  var p = local.split(RegExp(r'[._+-]')).first.replaceAll(RegExp(r'[0-9]+$'), '');
+  // « 29@gmail.com » : pas de prénom, on garde ce qu'il y a.
+  if (p.isEmpty) p = local;
+  if (p.isEmpty) return '?';
   return p[0].toUpperCase() + p.substring(1).toLowerCase();
 }

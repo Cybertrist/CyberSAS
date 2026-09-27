@@ -124,7 +124,9 @@ class _Scene extends StatelessWidget {
           top: 4,
           bottom: compact ? 0 : 24,
           child: Stack(fit: StackFit.expand, children: [
-            Tunnel(allume: r.connecte),
+            // Ouvert mais sans serveur après le délai : le tunnel s'éteint,
+            // rien ne passe.
+            Tunnel(allume: r.connecte && !r.tunnelEnPanne),
             Positioned(top: 12, left: 14, child: _coin(true)),
             Positioned(top: 12, right: 14, child: _coin(false)),
             Positioned(
@@ -175,16 +177,25 @@ class _CarteEtat extends StatelessWidget {
     // Pas encore signé par l'admin : les autres appareils le refuseraient,
     // l'interrupteur reste fermé à clé.
     final bloque = r.nonSigne && !on;
+    final erreur = r.erreurAffichee;
     final (etat, sous) = switch ((on, attente)) {
       // Sans réponse du serveur, on ne sait pas s'il a été signé entre-temps.
-      (false, false) when r.serveurInjoignable && r.erreur.isEmpty => ('Hors ligne', 'serveur injoignable'),
-      (false, false) when bloque => ('Verrouillé', 'en attente de signature'),
+      (false, false) when r.serveurInjoignable && erreur.isEmpty => ('Hors ligne', 'serveur injoignable'),
+      (false, false) when bloque => (
+          'Verrouillé',
+          switch (r.moi.etatCertificat) {
+            EtatCertificat.revoque => 'appareil révoqué',
+            EtatCertificat.expire => 'certificat expiré',
+            _ => 'en attente de signature',
+          }
+        ),
       (true, true) => ('Connexion…', 'ouverture du tunnel'),
       (false, true) => ('Coupure…', 'fermeture du tunnel'),
-      // Tunnel ouvert, mais pas encore de session avec le serveur.
-      (true, false) when !r.serveurJoint => ('Connexion…', r.erreur.isNotEmpty ? 'serveur injoignable' : 'recherche du serveur'),
+      // Tunnel ouvert, mais pas (encore) de session avec le serveur.
+      (true, false) when !r.serveurJoint =>
+        ('Connexion…', r.tunnelEnPanne || erreur.isNotEmpty ? 'serveur injoignable' : 'recherche du serveur'),
       (true, false) => ('Connecté', 'depuis ${duree(DateTime.now().difference(r.debutConnexion))}'),
-      (false, false) => ('Déconnecté', r.erreur.isNotEmpty ? r.erreur : 'tunnel coupé'),
+      (false, false) => ('Déconnecté', erreur.isNotEmpty ? erreur : 'tunnel coupé'),
     };
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -205,7 +216,7 @@ class _CarteEtat extends StatelessWidget {
               const Etiquette('Tunnel SAS'),
               const SizedBox(height: 4),
               Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-                if (on && !attente)
+                if (on && !attente && r.serveurJoint)
                   ShaderMask(
                     shaderCallback: (b) => Couleurs.degrade.createShader(b),
                     child: Text(etat, style: texte(21, graisse: 600, espacement: -0.42, couleur: Colors.white)),
@@ -217,9 +228,8 @@ class _CarteEtat extends StatelessWidget {
                   child: Text(
                     sous,
                     style: texte(12.5, couleur: on ? Couleurs.secondaire : Couleurs.tertiaire),
-                    maxLines: 1,
-                    overflow: TextOverflow.fade,
-                    softWrap: false,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ]),
@@ -292,11 +302,16 @@ class _CarteAppareil extends StatelessWidget {
             const SizedBox(width: 10),
             // Pas encore signé : l'admin compare cette empreinte avant de signer.
             Expanded(
-              child: moi.signe
-                  ? garantie(Ico.bouclier, Couleurs.cyan, 'Verrou vérifié', "Signé par l'admin")
-                  : r.serveurInjoignable
-                  ? garantie(Ico.bouclier, Couleurs.tertiaire, 'Serveur injoignable', 'signature à vérifier')
-                  : garantie(Ico.empreinte, Couleurs.rouge, 'En attente de signature', moi.certificat.empreinte.join('-')),
+              child: switch (moi.etatCertificat) {
+                // Signé : on prévient deux semaines avant l'expiration.
+                EtatCertificat.signe when moi.certificat.finConnue && moi.certificat.joursRestants(DateTime.now()) <= 14 =>
+                  garantie(Ico.bouclier, Couleurs.rouge, 'Expire dans ${moi.certificat.joursRestants(DateTime.now())} j', 'à renouveler'),
+                EtatCertificat.signe => garantie(Ico.bouclier, Couleurs.cyan, 'Verrou vérifié', "Signé par l'admin"),
+                EtatCertificat.revoque => garantie(Ico.bouclier, Couleurs.rouge, 'Appareil révoqué', "par l'admin"),
+                EtatCertificat.expire => garantie(Ico.bouclier, Couleurs.rouge, 'Certificat expiré', 'à renouveler'),
+                _ when r.serveurInjoignable => garantie(Ico.bouclier, Couleurs.tertiaire, 'Serveur injoignable', 'signature à vérifier'),
+                _ => garantie(Ico.empreinte, Couleurs.rouge, 'En attente de signature', moi.certificat.empreinte.join('-')),
+              },
             ),
           ]),
         ),
@@ -315,8 +330,8 @@ class _Infos extends StatelessWidget {
   Widget build(BuildContext context) {
     final lignes = [
       if (complet)
-        (Ico.activite, Couleurs.cyan, 'Connecté depuis', r.connecte ? duree(DateTime.now().difference(r.debutConnexion)) : '·'),
-      if (complet) (Ico.appareils, Couleurs.cyan, 'Appareils joignables', r.connecte ? '${r.enLigne} sur ${r.appareils.length}' : '0 sur ${r.appareils.length}'),
+        (Ico.activite, Couleurs.cyan, 'Connecté depuis', r.enService ? duree(DateTime.now().difference(r.debutConnexion)) : 'pas connecté'),
+      if (complet) (Ico.appareils, Couleurs.cyan, 'Appareils joignables', r.enService ? '${r.enLigne} sur ${r.appareils.length}' : '0 sur ${r.appareils.length}'),
       (Ico.globe, Couleurs.cyan, 'Réseau', r.plage),
       (Ico.cadenas, Couleurs.cyan, 'Protocole', r.protocole),
       (Ico.serveurLigne, Couleurs.cyan, 'Serveur', r.serveur),

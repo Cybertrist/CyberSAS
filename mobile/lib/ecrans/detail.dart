@@ -18,6 +18,21 @@ class EcranDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final a = EtatReseau.of(context).parAdresse(adresse);
+    if (a == null) {
+      return const Scaffold(
+        body: Fond(
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 6, 16, 16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Align(alignment: Alignment.centerLeft, child: BoutonRetour('Appareils')),
+                Expanded(child: AppareilParti()),
+              ]),
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       body: Fond(
         centre: const Alignment(-0.5, -0.68),
@@ -143,13 +158,14 @@ class _Identite extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = EtatReseau.of(context);
-    final admin = a.proprietaire == 'admin';
+    // Même règle que la liste : tunnel coupé, personne n'est joignable.
+    final enLigne = a.enLigne && r.enService;
     final t = compact ? 46.0 : (grand ? 56.0 : 60.0);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(children: [
         // L'icône de son type : un téléphone, un poste, une maison…
-        CaseIcone(a.type.ico, couleur: a.couleur, etat: a.enLigne ? EtatIcone.enLigne : EtatIcone.horsLigne, taille: t),
+        CaseIcone(a.type.ico, couleur: a.couleur, etat: enLigne ? EtatIcone.enLigne : EtatIcone.horsLigne, taille: t),
         SizedBox(width: compact ? 13 : (grand ? 16 : 18)),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -159,14 +175,14 @@ class _Identite extends StatelessWidget {
                 height: 6,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: a.enLigne ? Couleurs.vert : Couleurs.tertiaire,
-                  boxShadow: a.enLigne ? const [BoxShadow(color: Couleurs.vert, blurRadius: 8)] : null,
+                  color: enLigne ? Couleurs.vert : Couleurs.tertiaire,
+                  boxShadow: enLigne ? const [BoxShadow(color: Couleurs.vert, blurRadius: 8)] : null,
                 ),
               ),
               const SizedBox(width: 7),
-              Text(a.enLigne ? 'EN LIGNE · ' : 'HORS LIGNE · ',
-                  style: etiquette(couleur: a.enLigne ? Couleurs.vert : Couleurs.etiquette, espacement: 0.12)),
-              Text((admin ? 'admin' : a.proprietaire).toUpperCase(), style: etiquette(couleur: Couleurs.texte, espacement: 0.12)),
+              Text(enLigne ? 'EN LIGNE · ' : 'HORS LIGNE · ',
+                  style: etiquette(couleur: enLigne ? Couleurs.vert : Couleurs.etiquette, espacement: 0.12)),
+              Flexible(child: Text(a.nomProprietaire.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: etiquette(couleur: Couleurs.texte, espacement: 0.12))),
             ]),
             const SizedBox(height: 7),
             Row(children: [
@@ -225,7 +241,6 @@ class _Grille extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final admin = a.proprietaire == 'admin';
     Widget paire(Widget g, Widget d) => IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: g),
@@ -255,7 +270,9 @@ class _Grille extends StatelessWidget {
         _Case(
           'Ports ouverts',
           a.ports.isEmpty
-              ? Text('aucun', style: texte(14, couleur: Couleurs.tertiaire))
+              // Le moteur ne donne pas encore les ports : sur le vrai
+              // réseau, « aucun » serait faux.
+              ? Text(EtatReseau.of(context).reel ? 'selon la politique' : 'aucun', style: texte(14, couleur: Couleurs.tertiaire))
               : Wrap(spacing: 4, runSpacing: 4, children: [for (final p in a.ports) PucePort(p)]),
         ),
       ),
@@ -263,13 +280,29 @@ class _Grille extends StatelessWidget {
         const SizedBox(height: 10),
         paire(
           _Case('Propriétaire',
-              Text(admin ? 'Admin' : a.proprietaire[0].toUpperCase() + a.proprietaire.substring(1),
+              Text(a.nomProprietaire, maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: texte(14.5, graisse: 600))),
           _Case('Type', Text(a.type.libelle, style: texte(14.5))),
         ),
       ],
     ]);
   }
+}
+
+/// Un appareil qui a quitté le réseau pendant qu'on le regardait.
+class AppareilParti extends StatelessWidget {
+  const AppareilParti({super.key});
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icone(Ico.appareils, couleur: Couleurs.tertiaire, taille: 30),
+          const SizedBox(height: 14),
+          Text("Cet appareil n'est plus sur le réseau", style: texte(16, graisse: 600), textAlign: TextAlign.center),
+          const SizedBox(height: 6),
+          Text('Il a été retiré ou révoqué.', style: texte(13.5, couleur: Couleurs.secondaire), textAlign: TextAlign.center),
+        ]),
+      );
 }
 
 class _CarteCertificat extends StatelessWidget {
@@ -286,25 +319,39 @@ class _CarteCertificat extends StatelessWidget {
     final maintenant = DateTime.now();
     final date = '${c.fin.day.toString().padLeft(2, '0')}/${c.fin.month.toString().padLeft(2, '0')}/${c.fin.year}';
     final jours = c.joursRestants(maintenant);
+    final r = EtatReseau.of(context);
+    final etat = a.etatCertificat;
+    // Son propre certificat, serveur injoignable : l'appli ne sait pas.
+    final inconnu = a.moi && etat == EtatCertificat.attente && r.serveurInjoignable;
+    final (couleur, titreCarte, sous) = inconnu
+        ? (Couleurs.tertiaire, 'Certificat inconnu', 'serveur injoignable : à vérifier une fois en ligne')
+        : switch (etat) {
+            EtatCertificat.signe => (Couleurs.vert, 'Certificat signé', "par la clé de l'admin · verrou vérifié"),
+            EtatCertificat.attente => (Couleurs.tertiaire, 'Pas encore signé', "l'admin doit le signer depuis son téléphone"),
+            EtatCertificat.revoque => (Couleurs.rouge, 'Révoqué', "par le verrou : plus aucun appareil ne l'accepte"),
+            EtatCertificat.expire => (Couleurs.rouge, 'Certificat expiré', "à faire signer à nouveau par l'admin"),
+          };
+    final valable = etat == EtatCertificat.signe;
     final enfants = <Widget>[
       Row(children: [
-        const Icone(Ico.bouclier, couleur: Couleurs.vert, taille: 26, lueur: true),
+        Icone(Ico.bouclier, couleur: couleur, taille: 26, lueur: valable),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Certificat signé', style: texte(15.5, graisse: 600)),
+            Text(titreCarte, style: texte(15.5, graisse: 600, couleur: etat == EtatCertificat.signe || inconnu ? Couleurs.texte : couleur)),
             if (!compact) ...[
               const SizedBox(height: 2),
-              Text("par la clé de l'admin · verrou vérifié",
-                  style: texte(12.5, couleur: Couleurs.secondaire), maxLines: 1, overflow: TextOverflow.fade, softWrap: false),
+              Text(sous, style: texte(12.5, couleur: Couleurs.secondaire)),
             ],
           ]),
         ),
       ]),
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (valable || (etat == EtatCertificat.expire && c.finConnue)) Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-          Text("Valable jusqu'au", style: texte(14, couleur: Couleurs.secondaire)),
-          const Spacer(),
+          Expanded(
+            child: Text(valable ? "Valable jusqu'au" : 'Expiré le',
+                style: texte(14, couleur: Couleurs.secondaire), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
           Text(date, style: mono(15, graisse: 400)),
         ]),
         const SizedBox(height: 8),
@@ -341,7 +388,7 @@ class _CarteCertificat extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
-        children: [enfants[0], SizedBox(height: compact ? 10 : 14), enfants[1], SizedBox(height: compact ? 10 : 14), enfants[2]],
+        children: [for (final (i, e) in enfants.indexed) ...[if (i > 0) SizedBox(height: compact ? 10 : 14), e]],
       ),
     );
   }
@@ -388,7 +435,8 @@ Future<void> renommerAppareil(BuildContext context, Appareil a) async {
         Future<void> valider() async {
           if (enCours) return;
           maj(() => enCours = true);
-          final e = await r.renommer(r.parAdresse(a.adresse), champ.text);
+          final actuel = r.parAdresse(a.adresse);
+          final e = actuel == null ? "Cet appareil n'est plus sur le réseau" : await r.renommer(actuel, champ.text);
           if (!context.mounted) return;
           if (e == null) {
             Navigator.pop(context);
@@ -550,7 +598,9 @@ class _BoutonRetirer extends StatelessWidget {
     } else {
       // Retirer n'ouvre pas le coffre, mais demande le doigt quand même :
       // un téléphone laissé ouvert ne vide pas le réseau.
-      if (await confirmerIdentite('Retirer ${a.nomAffiche} (${a.empreinte}, ${a.adresse})') != Identite.confirmee) return;
+      final id = await confirmerIdentite('Retirer ${a.nomAffiche} (${a.empreinte}, ${a.adresse})');
+      if (id == Identite.impossible) messager.showSnackBar(const SnackBar(content: Text(sansEmpreinte)));
+      if (id != Identite.confirmee) return;
       e = await r.retirerAppareil(a);
     }
     messager.showSnackBar(SnackBar(content: Text(e ?? '${a.nomAffiche} ${revoquer ? 'révoqué' : 'retiré du réseau'}')));

@@ -125,7 +125,9 @@ class _CarteDemande extends StatelessWidget {
                 // comme pour signer : un téléphone laissé ouvert ne vide pas
                 // la liste.
                 final messager = ScaffoldMessenger.of(context);
-                if (await confirmerIdentite('Refuser ${d.nom}') != Identite.confirmee) return;
+                final id = await confirmerIdentite('Refuser ${d.nom}');
+                if (id == Identite.impossible) messager.showSnackBar(const SnackBar(content: Text(sansEmpreinte)));
+                if (id != Identite.confirmee) return;
                 final e = await r.traiter(d);
                 messager.showSnackBar(SnackBar(content: Text(e ?? '${d.nom} refusé')));
               },

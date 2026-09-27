@@ -10,8 +10,20 @@ const _canal = MethodChannel('fr.cybersas/moteur');
 
 /// Une erreur du moteur, prête à afficher.
 class ErreurMoteur implements Exception {
-  ErreurMoteur(this.message, {this.code = 'moteur'});
+  ErreurMoteur(String message, {this.code = 'moteur'}) : message = lisible(message);
   final String message;
+
+  /// Les erreurs réseau de Go (« dial tcp: lookup vpn…: no such host »)
+  /// deviennent une phrase ; les autres gardent leur texte, avec une
+  /// majuscule et sans le code HTTP entre parenthèses.
+  static String lisible(String brut) {
+    final m = brut.toLowerCase();
+    const reseau = ['no such host', 'connection refused', 'network is unreachable', 'timeout', 'dial tcp', 'connection reset'];
+    if (reseau.any(m.contains)) return 'Serveur injoignable : vérifie ta connexion, puis réessaie.';
+    final t = brut.replaceFirst(RegExp(r'\s*\(\d{3}\)\s*$'), '').trim();
+    if (t.isEmpty) return 'Erreur inconnue';
+    return t[0].toUpperCase() + t.substring(1);
+  }
 
   /// « annulee » : l'invite d'empreinte a été fermée. « coffre » : le
   /// coffre ne s'ouvre plus (empreinte ajoutée au téléphone), il a été

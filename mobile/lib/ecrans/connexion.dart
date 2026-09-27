@@ -196,7 +196,7 @@ class _Explication extends StatelessWidget {
           Text('Il te faut une invitation', style: texte(16, graisse: 600)),
           const SizedBox(height: 8),
           Text(
-            "Demande-la à l'admin du réseau : c'est un lien cybersas://, valable dix minutes et une seule fois. "
+            "Demande-la à l'admin du réseau : c'est un lien cybersas://, valable une seule fois et pour une durée limitée. "
             "Ouvre-le sur ce téléphone, ou copie-le puis colle-le ici.",
             style: texte(13.5, couleur: Couleurs.secondaire, hauteur: 1.45),
           ),

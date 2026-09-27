@@ -111,7 +111,7 @@ $(etape fait 'Le tunnel, le serveur et le verrou' 'Noise IK, relais chiffré de 
 $(etape fait 'Trois audits' '46 constats de trois relecteurs et d’une revue de sécurité, 10 aux outils du métier, puis 23 sur l’appli et l’admin à distance. Tous traités, un seul accepté et expliqué.')
 $(etape fait 'L’appli Android, avec le vrai tunnel' 'Le moteur Go embarqué et le service VPN d’Android : sur le Fold, l’interrupteur ouvre un vrai tunnel vers le labo.')
 $(etape fait 'L’admin depuis le téléphone' 'Signer une demande, refuser, inviter par un lien, renommer, retirer, révoquer. La clé du verrou dort dans la puce, une empreinte par signature.')
-$(etape cours 'La connexion Google dans l’appli' 'Le client OAuth Google, puis l’invite native d’Android : un compte, une touche.')
+$(etape fait 'La connexion Google dans l’appli' 'Le lien du réseau, puis l’invite native d’Android : un compte de l’équipe, une touche. Le serveur vérifie le jeton, l’admin signe.')
 $(etape venir 'L’équipe depuis l’appli' 'Ajouter ou retirer un membre de l’équipe sans ligne de commande.')
 $(etape venir 'Le serveur en ligne' 'D’abord sur un ordinateur à la maison pour les essais, puis sur un VPS avec un certificat Let’s Encrypt et une nouvelle clé du verrou.')
 $(etape venir 'Un secours pour la clé du verrou' 'Perdre le téléphone de l’admin ne doit pas geler le réseau : une seconde clé, gardée hors ligne.')

@@ -8,7 +8,7 @@
 
 Mon propre VPN, de bout en bout : le protocole du tunnel, le serveur, les applis. Il n'ouvre aucun port à la maison, son serveur relaie des paquets qu'il ne peut pas lire, et c'est le téléphone de l'admin, avec son doigt, qui décide qui entre.
 
-> **En cours.** Le serveur, le tunnel et le client Linux tournent dans le labo et passent leurs vérifications. L'appli Android ouvre un vrai tunnel sur le Fold, et l'admin gère le réseau depuis son téléphone. La connexion Google dans l'appli arrive. Voir [la feuille de route](#la-feuille-de-route).
+> **En cours.** Le serveur, le tunnel et le client Linux tournent dans le labo et passent leurs vérifications. L'appli Android ouvre un vrai tunnel sur le Fold, on la rejoint avec son compte Google, et l'admin gère le réseau depuis son téléphone. Voir [la feuille de route](#la-feuille-de-route).
 
 <img src="docs/schemas/tunnel.svg" alt="Le tunnel du logo de CyberSAS, animé comme dans l'appli : il s'allume couche par couche, les paquets entrent, puis il s'éteint. À gauche : Noise IK, puis ChaCha20-Poly1305, clés renouvelées toutes les deux minutes. À droite, l'état : coupé, connexion, connecté, coupure." width="100%">
 
@@ -38,7 +38,7 @@ L'appli vit dans le dossier `mobile/`. Elle embarque le moteur Go du tunnel (`po
 
 <img src="docs/schemas/relais.svg" alt="Un paquet part du téléphone fold8-tristan, en clair : GET / HTTP/1.1. Il voyage dans deux enveloppes. Le serveur sasd ouvre l'extérieure, la sienne, et n'y lit que le numéro du destinataire ; l'intérieure, la session de bout en bout, reste fermée : il n'en voit que des octets chiffrés. Il la remet dans une nouvelle enveloppe pour la maison, qui la déchiffre." width="100%">
 
-1. L'admin invite : l'appli partage un lien à usage unique, qui porte l'adresse du serveur et la clé publique du verrou. Bientôt, un compte Google de l'équipe suffira.
+1. L'admin partage le lien du réseau, qui porte l'adresse du serveur et la clé publique du verrou. Sur le nouvel appareil, on l'ouvre puis on se connecte avec son compte Google : seuls ceux de l'équipe passent. Sans compte Google, l'admin envoie plutôt une invitation, un lien à usage unique.
 2. Le nouvel appareil génère sa paire de clés. La clé privée ne le quitte jamais.
 3. Il s'inscrit auprès de sasd avec la preuve qu'il détient la clé privée. sasd lui attribue une adresse, `10.77.0.x`.
 4. L'admin voit la demande sur son téléphone, compare l'empreinte avec celle du nouvel appareil, et signe son certificat avec son doigt.
@@ -141,7 +141,7 @@ Pour aller plus loin, quatre documents, dessinés comme ce README :
 <a name="la-feuille-de-route"></a>
 <img src="docs/sections/s10.png" alt="10 La feuille de route" width="100%">
 
-<img src="docs/schemas/feuille.png" alt="La feuille de route. Fait : le tunnel, le serveur et le verrou, 79 tests Go, 8 cibles de fuzzing et 18 vérifications de bout en bout ; trois audits ; l'appli Android avec le vrai tunnel ; l'admin depuis le téléphone, signer, refuser, inviter, renommer, retirer, révoquer. En cours : la connexion Google dans l'appli. À venir : l'équipe depuis l'appli ; le serveur en ligne, d'abord à la maison puis sur un VPS ; un secours pour la clé du verrou. À discuter : l'appli Windows ; un site vitrine et une console web qui ne peut pas signer." width="100%">
+<img src="docs/schemas/feuille.png" alt="La feuille de route. Fait : le tunnel, le serveur et le verrou, 79 tests Go, 8 cibles de fuzzing et 18 vérifications de bout en bout ; trois audits ; l'appli Android avec le vrai tunnel ; l'admin depuis le téléphone, signer, refuser, inviter, renommer, retirer, révoquer ; la connexion Google dans l'appli. À venir : l'équipe depuis l'appli ; le serveur en ligne, d'abord à la maison puis sur un VPS ; un secours pour la clé du verrou. À discuter : l'appli Windows ; un site vitrine et une console web qui ne peut pas signer." width="100%">
 
 Les figures de ce README sont dessinées par les scripts de `docs/tools` : aucune ne sort d'un logiciel de dessin, et chaque animation est vérifiée image par image avant d'être publiée.
 

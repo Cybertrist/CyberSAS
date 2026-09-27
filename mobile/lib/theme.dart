@@ -1,4 +1,4 @@
-// La charte de CyberSas, reprise du logo : un cyan qui glisse vers le bleu
+// La charte de CyberSAS, reprise du logo : un cyan qui glisse vers le bleu
 // sur un bleu nuit presque noir. Toutes les couleurs et tous les styles de
 // texte de l'appli viennent d'ici (valeurs du dossier de design v3).
 import 'package:flutter/material.dart';
@@ -51,7 +51,7 @@ TextStyle _police(String famille, double taille, double graisse, Color couleur,
       height: hauteur,
     );
 
-/// Syne 800 : uniquement pour le mot « CyberSas ».
+/// Syne 800 : uniquement pour le mot « CyberSAS ».
 TextStyle syne(double taille, {Color couleur = Couleurs.texte}) =>
     _police('Syne', taille, 800, couleur, espacement: -0.01 * taille, hauteur: 1);
 
@@ -73,7 +73,7 @@ TextStyle mono(double taille,
 TextStyle etiquette({Color couleur = Couleurs.etiquette, double taille = 11, double espacement = 0.14}) =>
     mono(taille, graisse: 400, couleur: couleur, espacement: espacement * taille);
 
-ThemeData themeCyberSas() => ThemeData(
+ThemeData themeCyberSAS() => ThemeData(
       brightness: Brightness.dark,
       useMaterial3: true,
       fontFamily: 'SpaceGrotesk',

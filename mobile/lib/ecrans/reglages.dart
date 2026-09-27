@@ -136,7 +136,7 @@ class _Securite extends StatelessWidget {
     // On vérifie que le doigt (ou le code du téléphone) passe avant
     // d'activer : sinon on s'enfermerait dehors.
     if (v) {
-      final ok = await confirmerIdentite("Verrouiller CyberSas avec l'empreinte", biometrieSeule: false);
+      final ok = await confirmerIdentite("Verrouiller CyberSAS avec l'empreinte", biometrieSeule: false);
       if (ok == Identite.impossible) {
         messager.showSnackBar(const SnackBar(content: Text('Aucune empreinte ni code sur ce téléphone.')));
       }

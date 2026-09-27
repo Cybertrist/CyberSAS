@@ -1,4 +1,4 @@
-// Package tunnel est le moteur du VPN CyberSas : il lit les paquets IP de
+// Package tunnel est le moteur du VPN CyberSAS : il lit les paquets IP de
 // l'interface virtuelle, les chiffre, les envoie en UDP, et fait l'inverse
 // à l'arrivée. Le protocole est décrit en détail dans docs/protocole.md ;
 // en bref :
@@ -25,7 +25,7 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
 )
 
 // Prologue : haché au départ de chaque poignée de main. Une autre version

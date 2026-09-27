@@ -1,4 +1,4 @@
-// Package noise écrit la poignée de main du tunnel CyberSas :
+// Package noise écrit la poignée de main du tunnel CyberSAS :
 // Noise_IK_25519_ChaChaPoly_BLAKE2s, d'après la spécification du Noise
 // Protocol Framework (révision 34, noiseprotocol.org).
 //

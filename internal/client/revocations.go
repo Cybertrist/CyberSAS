@@ -7,9 +7,9 @@ import (
 	"math"
 	"slices"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 // RevocationsSignees : les clés de la liste, si sa signature par le verrou

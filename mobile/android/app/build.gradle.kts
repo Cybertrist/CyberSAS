@@ -53,7 +53,7 @@ android {
     defaultConfig {
         applicationId = "fr.cybersas.cybersas"
         if (demo) applicationIdSuffix = ".demo"
-        resValue("string", "app_name", if (demo) "CyberSas démo" else "CyberSas")
+        resValue("string", "app_name", if (demo) "CyberSAS démo" else "CyberSAS")
         // La démo ne doit pas intercepter les vraies invitations.
         manifestPlaceholders["schemaInvitation"] = if (demo) "cybersasdemo" else "cybersas"
         // Android 11 au moins : le coffre de la clé du verrou demande une

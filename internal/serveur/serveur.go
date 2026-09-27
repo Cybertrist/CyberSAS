@@ -1,4 +1,4 @@
-// Package serveur assemble le serveur CyberSas : l'API où les appareils
+// Package serveur assemble le serveur CyberSAS : l'API où les appareils
 // s'inscrivent, le moteur du tunnel, le pare-feu et le DNS du VPN.
 //
 // Une seule fonction décide de l'état du réseau : Synchroniser. Elle relit
@@ -24,14 +24,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
 
-	"github.com/Cybertrist/CyberSas/internal/base"
-	"github.com/Cybertrist/CyberSas/internal/dns"
-	"github.com/Cybertrist/CyberSas/internal/politique"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/tunnel"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/base"
+	"github.com/Cybertrist/CyberSAS/internal/dns"
+	"github.com/Cybertrist/CyberSAS/internal/politique"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/tunnel"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 	"github.com/coreos/go-oidc/v3/oidc"
 )
 

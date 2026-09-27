@@ -1,4 +1,4 @@
-// Package appareil : la vie d'un appareil CyberSas, commune au client
+// Package appareil : la vie d'un appareil CyberSAS, commune au client
 // Linux (cmd/sas) et à l'appli Android (pont/) :
 //   - son état sur disque (clé privée, inscription, ce qu'il a retenu) ;
 //   - l'inscription, qui garde la même clé d'une fois sur l'autre ;
@@ -24,11 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
-	"github.com/Cybertrist/CyberSas/internal/client"
-	"github.com/Cybertrist/CyberSas/internal/noise"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/tunnel"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/client"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/tunnel"
 )
 
 // Etat : tout ce que l'appareil garde entre deux lancements.

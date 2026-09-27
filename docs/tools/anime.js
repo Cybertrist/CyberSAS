@@ -61,7 +61,7 @@ ${etat('Connexion…', K.TEXTE, plage(A, allume))}
 ${etat('Connecté', K.CYAN, plage(allume, E))}
 ${etat('Coupure…', K.TEXTE, plage(E, eteint))}
 ${t(1200, 218, '10.77.0.18 → 10.77.0.2', { taille: 14, police: MONO, ancre: 'end' })}`;
-  svg('tunnel.svg', 1280, 400, corps, "Le tunnel du logo de CyberSas, animé exactement comme sur l'accueil de l'appli : coupé, il n'en reste qu'un fantôme bleu nuit ; à l'allumage, le halo, les arches, la maison puis les câbles s'allument l'un après l'autre et les paquets entrent ; à l'extinction, tout s'éteint dans l'ordre inverse. À gauche : Noise IK, puis ChaCha20-Poly1305, clés renouvelées toutes les deux minutes. À droite, l'état : coupé, connexion, connecté, coupure.");
+  svg('tunnel.svg', 1280, 400, corps, "Le tunnel du logo de CyberSAS, animé exactement comme sur l'accueil de l'appli : coupé, il n'en reste qu'un fantôme bleu nuit ; à l'allumage, le halo, les arches, la maison puis les câbles s'allument l'un après l'autre et les paquets entrent ; à l'extinction, tout s'éteint dans l'ordre inverse. À gauche : Noise IK, puis ChaCha20-Poly1305, clés renouvelées toutes les deux minutes. À droite, l'état : coupé, connexion, connecté, coupure.");
 }
 
 // ------------------------------------------------------------ 2. le relais

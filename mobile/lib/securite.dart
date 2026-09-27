@@ -24,7 +24,7 @@ Future<Identite> confirmerIdentite(String raison, {bool biometrieSeule = true}) 
     final ok = await _auth.authenticate(
       localizedReason: raison,
       biometricOnly: biometrieSeule,
-      authMessages: const [AndroidAuthMessages(signInTitle: 'CyberSas', cancelButton: 'Annuler')],
+      authMessages: const [AndroidAuthMessages(signInTitle: 'CyberSAS', cancelButton: 'Annuler')],
     );
     return ok ? Identite.confirmee : Identite.annulee;
   } on LocalAuthException catch (e) {

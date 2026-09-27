@@ -1,4 +1,4 @@
-module github.com/Cybertrist/CyberSas
+module github.com/Cybertrist/CyberSAS
 
 go 1.27
 

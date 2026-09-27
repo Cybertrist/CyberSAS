@@ -45,7 +45,7 @@ class _EcranVerrouState extends State<EcranVerrou> with SingleTickerProviderStat
       _enCours = true;
       _erreur = null;
     });
-    final ok = await confirmerIdentite('Déverrouiller CyberSas', biometrieSeule: false);
+    final ok = await confirmerIdentite('Déverrouiller CyberSAS', biometrieSeule: false);
     if (!mounted) return;
     if (ok == Identite.confirmee) {
       widget.deverrouiller();

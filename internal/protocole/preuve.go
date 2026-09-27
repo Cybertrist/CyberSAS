@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
 
 	"golang.org/x/crypto/blake2s"
 )

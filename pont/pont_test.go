@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/appareil"
-	"github.com/Cybertrist/CyberSas/internal/client"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/appareil"
+	"github.com/Cybertrist/CyberSAS/internal/client"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 func lireVue(t *testing.T, s string) Vue {

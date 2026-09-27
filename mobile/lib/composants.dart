@@ -7,7 +7,7 @@ import 'donnees.dart';
 import 'icones.dart';
 import 'theme.dart';
 
-/// « CyberSas », « Sas » en cyan.
+/// « CyberSAS », « SAS » en cyan.
 class Marque extends StatelessWidget {
   const Marque({super.key, this.taille = 24});
   final double taille;
@@ -18,7 +18,7 @@ class Marque extends StatelessWidget {
       children: [
         TextSpan(text: 'Cyber', style: syne(taille)),
         TextSpan(
-          text: 'Sas',
+          text: 'SAS',
           style: syne(taille, couleur: Couleurs.cyan),
         ),
       ],

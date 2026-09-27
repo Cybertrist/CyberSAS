@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
 )
 
 // Tun : l'interface réseau virtuelle, qui rend et prend des paquets IP

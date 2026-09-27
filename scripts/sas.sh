@@ -1,5 +1,5 @@
 #!/bin/bash
-# CyberSas : tout ce qu'on fait sur la pile passe par ce script.
+# CyberSAS : tout ce qu'on fait sur la pile passe par ce script.
 #
 # Sur le serveur :
 #   sas.sh init                      secrets, autorité du labo, configurations
@@ -91,7 +91,7 @@ init_ca () {
     # d'une box ou d'un NAS jointe par son adresse.
     openssl req -x509 -new -nodes -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
       -keyout "$ca/prive/ca.key" -out "$ca/public/cybersas-ca.pem" -days 1825 \
-      -subj "/O=CyberSas/CN=CyberSas Labo CA" \
+      -subj "/O=CyberSAS/CN=CyberSAS Labo CA" \
       -addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
       -addext "keyUsage=critical,keyCertSign,cRLSign" \
       -addext "nameConstraints=critical,permitted;DNS:$DOMAINE,excluded;IP:0.0.0.0/0.0.0.0,excluded;IP:0:0:0:0:0:0:0:0/0:0:0:0:0:0:0:0" 2>/dev/null

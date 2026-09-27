@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/tunnel"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/tunnel"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 func aleatoire64(n int) string {

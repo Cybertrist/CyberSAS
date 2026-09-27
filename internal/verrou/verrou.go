@@ -39,7 +39,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
 )
 
 // Chaque type de document a son contexte : une signature faite pour l'un

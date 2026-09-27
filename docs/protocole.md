@@ -161,7 +161,7 @@ Les relectures automatiques, leurs constats et ce qui en a été fait sont dans 
 
 <div align="center">
 
-<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSas en un coup d’œil." width="49%"></a>
+<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSAS en un coup d’œil." width="49%"></a>
 <a href="verrou.md"><img src="nav/verrou.png" alt="Le verrou : la chaîne de confiance, le coffre du téléphone, signer et révoquer." width="49%"></a>
 <a href="menaces.md"><img src="nav/menaces.png" alt="Le modèle de menace : ce qui est exposé, le serveur piraté, le téléphone volé." width="49%"></a>
 <a href="audit.md"><img src="nav/audit.png" alt="L’audit de sécurité : trois relectures, 79 constats." width="49%"></a>

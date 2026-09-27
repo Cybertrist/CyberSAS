@@ -1,5 +1,5 @@
 name: cybersas
-description: "CyberSas : le client Android du réseau privé CyberSas."
+description: "CyberSAS : le client Android du réseau privé CyberSAS."
 publish_to: 'none'
 
 # Incrémenter à chaque APK envoyé : Android refuse une mise à jour dont

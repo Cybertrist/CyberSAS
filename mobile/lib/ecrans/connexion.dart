@@ -68,7 +68,7 @@ class _EcranConnexionState extends State<EcranConnexion> {
     final i = Invitation.lire(d?.text ?? '');
     setState(() {
       _invitation = i;
-      _erreur = i == null ? "Ce n'est pas une invitation CyberSas : copie le lien cybersas:// en entier." : null;
+      _erreur = i == null ? "Ce n'est pas une invitation CyberSAS : copie le lien cybersas:// en entier." : null;
     });
   }
 

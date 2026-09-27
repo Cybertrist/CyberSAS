@@ -117,7 +117,7 @@ C'est pour cela qu'un secours pour la clé du verrou est dans la feuille de rout
 
 <div align="center">
 
-<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSas en un coup d’œil." width="49%"></a>
+<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSAS en un coup d’œil." width="49%"></a>
 <a href="protocole.md"><img src="nav/protocole.png" alt="Le protocole : les deux couches, Noise IK, les messages à l’échelle, le filtre." width="49%"></a>
 <a href="menaces.md"><img src="nav/menaces.png" alt="Le modèle de menace : ce qui est exposé, le serveur piraté, le téléphone volé." width="49%"></a>
 <a href="audit.md"><img src="nav/audit.png" alt="L’audit de sécurité : trois relectures, 79 constats." width="49%"></a>

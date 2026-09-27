@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
 )
 
 // Fuzzing : Go génère des millions d'entrées, en partant des exemples

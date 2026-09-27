@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/base"
-	"github.com/Cybertrist/CyberSas/internal/dns"
-	"github.com/Cybertrist/CyberSas/internal/noise"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/tunnel"
+	"github.com/Cybertrist/CyberSAS/internal/base"
+	"github.com/Cybertrist/CyberSAS/internal/dns"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/tunnel"
 	mdns "github.com/miekg/dns"
 )
 

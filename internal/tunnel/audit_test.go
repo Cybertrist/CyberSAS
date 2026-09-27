@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
 )
 
 // Tests de non-régression des constats de l'audit du protocole

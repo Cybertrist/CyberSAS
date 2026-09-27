@@ -43,8 +43,8 @@ class _EcranAjoutState extends State<EcranAjout> {
   void _renouveler() => setState(() => _invitation = CodeInvitation(_invitation.serveur));
 
   Future<void> _partager() => SharePlus.instance.share(ShareParams(
-        subject: 'Invitation CyberSas',
-        text: 'Rejoins mon réseau CyberSas.\n'
+        subject: 'Invitation CyberSAS',
+        text: 'Rejoins mon réseau CyberSAS.\n'
             'Serveur : ${_invitation.serveur}\n'
             'Code : ${_invitation.code} (usage unique, 10 minutes)\n'
             '${_invitation.charge}',
@@ -182,7 +182,7 @@ class _Etapes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const etapes = [
-      ('Installer CyberSas', 'Sur le nouvel appareil'),
+      ('Installer CyberSAS', 'Sur le nouvel appareil'),
       ('Scanner ou saisir le code', 'Le nouvel appareil crée sa propre clé'),
       ("Signature sur le téléphone de l'admin", "Après vérification de l'empreinte"),
     ];
@@ -296,8 +296,8 @@ class _AjoutReelState extends State<_AjoutReel> {
   String get _duree => _durees.firstWhere((d) => d.$1 == _minutes).$2;
 
   Future<void> _partager() => SharePlus.instance.share(ShareParams(
-        subject: 'Invitation CyberSas',
-        text: 'Rejoins mon réseau CyberSas : ouvre ce lien sur ton appareil, où CyberSas est installé '
+        subject: 'Invitation CyberSAS',
+        text: 'Rejoins mon réseau CyberSAS : ouvre ce lien sur ton appareil, où CyberSAS est installé '
             '(usage unique, valable $_duree).\n$_lien',
       ));
 

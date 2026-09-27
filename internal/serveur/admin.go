@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
-	"github.com/Cybertrist/CyberSas/internal/base"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/base"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 // Les routes qui servent l'appli au-delà du tunnel : le nom affiché de son

@@ -36,20 +36,20 @@ Future<void> main() async {
   }
   if (reseau.ecranMasque) await masquerEcran(true);
   WidgetsBinding.instance.addObserver(_BarrageRetour());
-  runApp(CyberSas(reseau: reseau));
+  runApp(CyberSAS(reseau: reseau));
 }
 
-class CyberSas extends StatelessWidget {
-  const CyberSas({super.key, required this.reseau});
+class CyberSAS extends StatelessWidget {
+  const CyberSAS({super.key, required this.reseau});
   final Reseau reseau;
 
   @override
   Widget build(BuildContext context) => EtatReseau(
         reseau: reseau,
         child: MaterialApp(
-          title: 'CyberSas',
+          title: 'CyberSAS',
           debugShowCheckedModeBanner: false,
-          theme: themeCyberSas(),
+          theme: themeCyberSAS(),
           // Le verrou passe au-dessus de tout, fenêtres comprises : une fenêtre
           // ouverte (l'import de la clé) reste en dessous et se retrouve après
           // l'empreinte.

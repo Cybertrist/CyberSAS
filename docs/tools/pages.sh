@@ -71,7 +71,7 @@ grille "$S/verrou/perte.png" 2 \
 
 # ========================================================== les menaces
 banniere_doc "$DOCS/banniere-menaces.png" "CYBERSAS · DOCUMENTATION" "Le modèle de menace" \
-  "Ce que CyberSas protège, ce qu'un attaquant peut encore faire, et ce qu'il ne promet pas."
+  "Ce que CyberSAS protège, ce qu'un attaquant peut encore faire, et ce qu'il ne promet pas."
 bandeaux "$DOCS/sections/menaces" "Ce qu'on protège" "Ce qui est exposé" "Contre qui" "Si le serveur tombe" \
   "Si le téléphone de l'admin est volé" "Ce qu'il ne promet pas"
 
@@ -123,7 +123,7 @@ grille "$S/audit/trois.png" 3 \
 # ================================================ les cartes de navigation
 # Deux par ligne, sous le README et au bas de chaque document.
 N="$DOCS/nav"
-carte_lien "$N/readme.png" "home" "Le README" "CyberSas en un coup d'œil : ce que c'est, l'appli, le labo."
+carte_lien "$N/readme.png" "home" "Le README" "CyberSAS en un coup d'œil : ce que c'est, l'appli, le labo."
 carte_lien "$N/protocole.png" "sync_alt" "Le protocole" "Les deux couches, Noise IK, les messages à l'échelle, le filtre."
 carte_lien "$N/verrou.png" "key" "Le verrou" "La chaîne de confiance, le coffre du téléphone, signer et révoquer."
 carte_lien "$N/menaces.png" "shield" "Le modèle de menace" "Ce qui est exposé, le serveur piraté, le téléphone volé."

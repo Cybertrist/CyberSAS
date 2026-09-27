@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
 )
 
 // --- outils ------------------------------------------------------------------

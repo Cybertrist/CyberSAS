@@ -1,4 +1,4 @@
-// sasd : le serveur CyberSas.
+// sasd : le serveur CyberSAS.
 //
 //	sasd                               fait tourner le serveur
 //	sasd cle --etiquette maison [--nom maison]  clé d'inscription pour une machine
@@ -31,16 +31,16 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/base"
-	"github.com/Cybertrist/CyberSas/internal/client"
-	"github.com/Cybertrist/CyberSas/internal/dns"
-	"github.com/Cybertrist/CyberSas/internal/noise"
-	"github.com/Cybertrist/CyberSas/internal/politique"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/serveur"
-	"github.com/Cybertrist/CyberSas/internal/tun"
-	"github.com/Cybertrist/CyberSas/internal/tunnel"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/base"
+	"github.com/Cybertrist/CyberSAS/internal/client"
+	"github.com/Cybertrist/CyberSAS/internal/dns"
+	"github.com/Cybertrist/CyberSAS/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/politique"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/serveur"
+	"github.com/Cybertrist/CyberSAS/internal/tun"
+	"github.com/Cybertrist/CyberSAS/internal/tunnel"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 func env(nom, defaut string) string {

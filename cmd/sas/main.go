@@ -1,4 +1,4 @@
-// sas : le client CyberSas pour Linux, pensé pour les machines sans écran.
+// sas : le client CyberSAS pour Linux, pensé pour les machines sans écran.
 //
 //	SAS_CLE=sas-... sas rejoindre --serveur https://vpn.exemple.fr [--nom maison] [--verrou <clé>]
 //	sas demon                       tient le tunnel ouvert (à lancer au démarrage)
@@ -38,13 +38,13 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/Cybertrist/CyberSas/internal/appareil"
-	"github.com/Cybertrist/CyberSas/internal/b64"
-	"github.com/Cybertrist/CyberSas/internal/client"
-	"github.com/Cybertrist/CyberSas/internal/politique"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/tun"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/appareil"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/client"
+	"github.com/Cybertrist/CyberSAS/internal/politique"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/tun"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 // stockage : l'état de cet appareil, dans /var/lib/sas, lisible par root

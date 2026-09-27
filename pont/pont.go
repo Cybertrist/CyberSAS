@@ -1,4 +1,4 @@
-// Package pont : le moteur CyberSas vu depuis l'appli Android, compilé par
+// Package pont : le moteur CyberSAS vu depuis l'appli Android, compilé par
 // gomobile (gomobile bind ./pont). Des types simples seulement : chaînes,
 // entiers, erreurs, et une interface que Kotlin implémente.
 //
@@ -22,11 +22,11 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/Cybertrist/CyberSas/internal/appareil"
-	"github.com/Cybertrist/CyberSas/internal/b64"
-	"github.com/Cybertrist/CyberSas/internal/client"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/tunnel"
+	"github.com/Cybertrist/CyberSAS/internal/appareil"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/client"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/tunnel"
 )
 
 // Protecteur : VpnService.protect. La prise UDP du tunnel doit sortir par

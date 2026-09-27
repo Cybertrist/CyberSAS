@@ -1,4 +1,4 @@
-# L'appli Android de CyberSas
+# L'appli Android de CyberSAS
 
 L'appli qui rejoint le réseau, ouvre le tunnel et, pour l'admin, signe qui entre. Flutter pour l'interface, le moteur Go du tunnel embarqué ([`../pont`](../pont)), et le service VPN d'Android. Pensée pour le téléphone comme pour le Fold déplié.
 
@@ -33,7 +33,7 @@ La version se change à deux endroits : `pubspec.yaml` et `versionAppli` dans `l
 
 ## La démo
 
-`--dart-define=DEMO=true` construit une autre appli, installable à côté de la vraie (`fr.cybersas.cybersas.demo`, « CyberSas démo ») : un réseau d'exemple, aucun serveur, aucune clé.
+`--dart-define=DEMO=true` construit une autre appli, installable à côté de la vraie (`fr.cybersas.cybersas.demo`, « CyberSAS démo ») : un réseau d'exemple, aucun serveur, aucune clé.
 
 ## Les captures
 

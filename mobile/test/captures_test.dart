@@ -41,7 +41,7 @@ Future<void> _attendre(WidgetTester t, [int ms = 3200]) async {
 Future<void> _ouvrir(WidgetTester t, Size taille, Reseau r) async {
   t.view.physicalSize = taille * 2;
   t.view.devicePixelRatio = 2;
-  await t.pumpWidget(CyberSas(reseau: r));
+  await t.pumpWidget(CyberSAS(reseau: r));
   await t.runAsync(() => precacheImage(const AssetImage('assets/icon/icon.png'), t.element(find.byType(Scaffold).first)));
 }
 
@@ -55,7 +55,7 @@ void main() {
         await _ouvrir(t, f.value, Reseau(inscrit: true));
         if (onglet > 0) await t.tap(find.text(['Accueil', 'Appareils', 'Réglages'][onglet]).last);
         await _attendre(t);
-        await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/${f.key}-$nom.png'));
+        await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/${f.key}-$nom.png'));
       });
     }
   }
@@ -66,7 +66,7 @@ void main() {
     await _attendre(t, 500);
     await t.tap(find.byType(Interrupteur));
     await _attendre(t, 3600);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/telephone-accueil-eteint.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-accueil-eteint.png'));
   });
 
   for (final f in ['telephone', 'fold-deplie-portrait']) {
@@ -74,7 +74,7 @@ void main() {
       addTearDown(t.view.reset);
       await _ouvrir(t, _formats[f]!, Reseau());
       await _attendre(t, 600);
-      await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/$f-connexion.png'));
+      await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/$f-connexion.png'));
     });
   }
 
@@ -90,7 +90,7 @@ void main() {
         final nav = t.state<NavigatorState>(find.byType(Navigator).first);
         nav.push(MaterialPageRoute<void>(builder: (_) => ecran));
         await _attendre(t, 800);
-        await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/$f-$nom.png'));
+        await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/$f-$nom.png'));
       });
     }
   }
@@ -102,7 +102,7 @@ void main() {
     await _attendre(t, 500);
     await t.tap(find.byType(Interrupteur));
     await _attendre(t, 1200);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/telephone-accueil-transition.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-accueil-transition.png'));
     await _attendre(t, 2500);
   });
 
@@ -111,7 +111,7 @@ void main() {
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true)..verrouAppli = true);
     // L'entrée du logo, puis la demande d'empreinte (1,5 s).
     await _attendre(t, 2000);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/telephone-verrou.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-verrou.png'));
   });
 
   testWidgets('telephone renommer', (t) async {
@@ -121,7 +121,7 @@ void main() {
     await _attendre(t, 500);
     await t.tap(find.text('Nom'));
     await _attendre(t, 800);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/telephone-renommer.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-renommer.png'));
   });
 
   // Les deux demandes signées : laptop-lea et tab-tristan dans la liste.
@@ -134,7 +134,7 @@ void main() {
     await _ouvrir(t, _formats['telephone']!, r);
     await t.tap(find.text('Appareils').last);
     await _attendre(t);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/telephone-appareils-signes.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-appareils-signes.png'));
   });
 
   testWidgets('telephone appareils-coupe', (t) async {
@@ -142,7 +142,7 @@ void main() {
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true)..connecte = false);
     await t.tap(find.text('Appareils').last);
     await _attendre(t);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/telephone-appareils-coupe.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-appareils-coupe.png'));
   });
 
   // La carte à mi-coupure : réseau déjà gris, fil du Fold en train de se vider.
@@ -154,7 +154,7 @@ void main() {
     await _attendre(t, 800);
     r.basculer(false);
     await _attendre(t, 1900);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/telephone-appareils-coupure.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-appareils-coupure.png'));
     await _attendre(t, 2000);
   });
 
@@ -166,7 +166,7 @@ void main() {
     await _attendre(t, 800);
     await t.tap(find.text('maison').last);
     await _attendre(t, 1200);
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/fold-deplie-paysage-appareils-detail.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/fold-deplie-paysage-appareils-detail.png'));
   });
 
   // Au milieu du décalage : la carte part à gauche, la liste arrive.
@@ -178,7 +178,7 @@ void main() {
     await t.tap(find.text('maison').last);
     await t.pump();
     await t.pump(const Duration(milliseconds: 120));
-    await expectLater(find.byType(CyberSas), matchesGoldenFile('captures/fold-deplie-paysage-appareils-glisse.png'));
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/fold-deplie-paysage-appareils-glisse.png'));
     await _attendre(t, 800);
   });
 }

@@ -38,7 +38,7 @@ h1 em{font-style:normal;color:var(--cyan)}
 <div class="w"><div class="grille"></div>
 <div class="cat"><b>VPN</b><b>GO</b><b>ANDROID</b><i>EN COURS</i></div>
 <div class="in"><img class="logo" src="$LOGO">
-<div><h1>Cyber<em>Sas</em></h1>
+<div><h1>Cyber<em>SAS</em></h1>
 <p class="sl"><b>Mon propre réseau privé, écrit de bout en bout.</b><br>Un serveur qui <em>relaie sans lire</em>, une clé qui ne quitte <em>jamais</em> le téléphone.</p>
 <div class="pl"><span>Go</span><span>Noise IK</span><span>ChaCha20-Poly1305</span><span>Ed25519</span><span>nftables</span><span>Flutter</span></div></div></div>
 <div class="ln"></div></div>
@@ -116,7 +116,7 @@ $(etape venir 'L’équipe depuis l’appli' 'Ajouter ou retirer un membre de l�
 $(etape venir 'Le serveur en ligne' 'D’abord sur un ordinateur à la maison pour les essais, puis sur un VPS avec un certificat Let’s Encrypt et une nouvelle clé du verrou.')
 $(etape venir 'Un secours pour la clé du verrou' 'Perdre le téléphone de l’admin ne doit pas geler le réseau : une seconde clé, gardée hors ligne.')
 $(etape discuter 'L’appli Windows' 'Le moteur tourne déjà sur PC ; il manque le pilote réseau et l’interface.')
-$(etape discuter 'Un site, et une console web' 'Une vitrine pour présenter CyberSas, et une console pour voir le réseau à distance, sans jamais pouvoir signer.')
+$(etape discuter 'Un site, et une console web' 'Une vitrine pour présenter CyberSAS, et une console pour voir le réseau à distance, sans jamais pouvoir signer.')
 </div>
 HTML
 pied; } > "$D/html/feuille.html"

@@ -1,4 +1,4 @@
-// Package client : ce que tout client CyberSas fait, quelle que soit la
+// Package client : ce que tout client CyberSAS fait, quelle que soit la
 // plateforme. Le client Linux (cmd/sas) s'en sert, et les applis Android et
 // Windows s'en serviront à l'identique, compilées depuis ce même code.
 //
@@ -29,12 +29,12 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
 
-	"github.com/Cybertrist/CyberSas/internal/politique"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/tunnel"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/politique"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/tunnel"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 // ErrDesinscrit : le serveur ne connaît plus cet appareil (retiré, expiré).

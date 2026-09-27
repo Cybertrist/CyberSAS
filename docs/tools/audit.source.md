@@ -6,7 +6,7 @@
 
 <br>
 
-Ce document rend compte des relectures de sécurité de CyberSas : qui a relu quoi, ce qui a été trouvé, ce qui a été corrigé, et ce qui reste. Les deux premières datent du 24 septembre 2026, la troisième du 26.
+Ce document rend compte des relectures de sécurité de CyberSAS : qui a relu quoi, ce qui a été trouvé, ce qui a été corrigé, et ce qui reste. Les deux premières datent du 24 septembre 2026, la troisième du 26.
 
 <img src="schemas/audit/trois.png" alt="Trois audits. Premier audit, le 24 septembre : trois relecteurs indépendants, protocole, serveur et clients, puis une revue de sécurité des corrections ; 46 constats, dont 3 hauts. Deuxième audit, le même jour : les outils du métier, govulncheck, staticcheck, gosec, Semgrep, Trivy, Hadolint, ShellCheck, Gixy et du fuzzing différentiel ; 10 constats. Troisième audit, le 26 septembre : ce qui a changé depuis, les routes d'admin, l'Android natif, la frontière entre l'appli et le moteur ; 23 constats, dont 1 haut." width="100%">
 
@@ -552,7 +552,7 @@ corrigé ou écarté avec sa raison.
 - **`worker_rlimit_nofile`** (Gixy). Réglage de charge du `nginx.conf` de
   l'image officielle, sans effet sur la sécurité.
 - **govulncheck** relève GO-2026-5932 dans `golang.org/x/crypto/openpgp`,
-  paquet que CyberSas n'importe pas. Trivy ne trouve aucune vulnérabilité
+  paquet que CyberSAS n'importe pas. Trivy ne trouve aucune vulnérabilité
   dans l'image, ni aucun secret dans le dépôt.
 
 ### Le fuzzing, poussé plus loin
@@ -688,7 +688,7 @@ Le service VPN n'est joignable que par le système ; le lien `cybersas://` n'est
 
 <div align="center">
 
-<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSas en un coup d’œil." width="49%"></a>
+<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSAS en un coup d’œil." width="49%"></a>
 <a href="protocole.md"><img src="nav/protocole.png" alt="Le protocole : les deux couches, Noise IK, les messages à l’échelle, le filtre." width="49%"></a>
 <a href="verrou.md"><img src="nav/verrou.png" alt="Le verrou : la chaîne de confiance, le coffre du téléphone, signer et révoquer." width="49%"></a>
 <a href="menaces.md"><img src="nav/menaces.png" alt="Le modèle de menace : ce qui est exposé, le serveur piraté, le téléphone volé." width="49%"></a>

@@ -10,7 +10,7 @@ import fr.cybersas.pont.Protecteur
 import org.json.JSONObject
 import java.io.File
 
-// Le tunnel CyberSas, tenu par le moteur Go (pont/, compilé par gomobile).
+// Le tunnel CyberSAS, tenu par le moteur Go (pont/, compilé par gomobile).
 //
 // Seul le réseau privé (10.77.0.0/24) passe par l'interface : la navigation
 // sur Internet reste en dehors. Le DNS du réseau répond à *.sas.internal et
@@ -35,7 +35,7 @@ class TunnelService : VpnService() {
             try {
                 demarrer()
             } catch (e: Exception) {
-                Log.e("CyberSas", "tunnel impossible", e)
+                Log.e("CyberSAS", "tunnel impossible", e)
                 stopSelf()
             }
         }.start()
@@ -48,7 +48,7 @@ class TunnelService : VpnService() {
         // Le serveur est la première adresse du réseau : c'est aussi le DNS.
         val dns = reseau.substringBeforeLast('.') + ".1"
         val interfaceTun = Builder()
-            .setSession("CyberSas")
+            .setSession("CyberSAS")
             .setMtu(MTU)
             .addAddress(infos.getString("adresse"), bits.toInt())
             .addRoute(reseau, bits.toInt())

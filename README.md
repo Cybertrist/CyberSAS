@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/banniere.png" alt="CyberSas : mon propre réseau privé, écrit de bout en bout. Un serveur qui relaie sans lire, une clé qui ne quitte jamais le téléphone. Go, Noise IK, ChaCha20-Poly1305, Ed25519, nftables, Flutter." width="100%">
+<img src="docs/banniere.png" alt="CyberSAS : mon propre réseau privé, écrit de bout en bout. Un serveur qui relaie sans lire, une clé qui ne quitte jamais le téléphone. Go, Noise IK, ChaCha20-Poly1305, Ed25519, nftables, Flutter." width="100%">
 
 </div>
 
@@ -10,13 +10,13 @@ Mon propre VPN, de bout en bout : le protocole du tunnel, le serveur, les applis
 
 > **En cours.** Le serveur, le tunnel et le client Linux tournent dans le labo et passent leurs vérifications. L'appli Android ouvre un vrai tunnel sur le Fold, et l'admin gère le réseau depuis son téléphone. La connexion Google dans l'appli arrive. Voir [la feuille de route](#la-feuille-de-route).
 
-<img src="docs/schemas/tunnel.svg" alt="Le tunnel du logo de CyberSas, animé comme dans l'appli : il s'allume couche par couche, les paquets entrent, puis il s'éteint. À gauche : Noise IK, puis ChaCha20-Poly1305, clés renouvelées toutes les deux minutes. À droite, l'état : coupé, connexion, connecté, coupure." width="100%">
+<img src="docs/schemas/tunnel.svg" alt="Le tunnel du logo de CyberSAS, animé comme dans l'appli : il s'allume couche par couche, les paquets entrent, puis il s'éteint. À gauche : Noise IK, puis ChaCha20-Poly1305, clés renouvelées toutes les deux minutes. À droite, l'état : coupé, connexion, connecté, coupure." width="100%">
 
 <img src="docs/sections/s01.png" alt="01 Ce que c'est" width="100%">
 
 Héberger un service chez soi, c'est d'habitude ouvrir des ports sur sa box et laisser son adresse IP à la vue de tous. Partager un serveur avec quelques personnes, c'est souvent un mot de passe commun qui circule par message.
 
-Tailscale règle ça très bien, mais c'est leur serveur, leur appli et leur protocole. CyberSas est l'exercice inverse : tout écrire soi-même, sauf les primitives cryptographiques, que personne de sérieux n'écrit.
+Tailscale règle ça très bien, mais c'est leur serveur, leur appli et leur protocole. CyberSAS est l'exercice inverse : tout écrire soi-même, sauf les primitives cryptographiques, que personne de sérieux n'écrit.
 
 <img src="docs/schemas/promesses.png" alt="Six promesses. Un seul point d'entrée : un petit serveur public, aucun port ouvert à la maison. Chiffré de bout en bout : le serveur relaie des paquets qu'il ne peut pas ouvrir. Un serveur qu'on n'a pas à croire : chaque appareil porte un certificat signé par la clé du verrou. La clé dans la puce du téléphone : chiffrée par la puce sécurisée du téléphone de l'admin, une empreinte l'ouvre pour une seule signature. Un compte Google, aucun mot de passe. Tout écrit à la main, sauf les primitives cryptographiques." width="100%">
 
@@ -123,7 +123,7 @@ bash scripts/sas.sh google <id>.apps.googleusercontent.com   # le secret est dem
 
 <img src="docs/sections/s09.png" alt="09 La sécurité, et ses limites" width="100%">
 
-CyberSas a été relu trois fois. D'abord par trois relecteurs indépendants et une revue de sécurité : 46 constats, dont 3 hauts. Puis aux outils du métier (govulncheck, staticcheck, gosec, Semgrep, Trivy, Hadolint, ShellCheck, Gixy, fuzzing différentiel contre flynn/noise) : 10 de plus. Enfin sur l'appli et l'admin à distance : 23, dont un haut, une révocation depuis l'appli qui reprenait sans la vérifier la liste du serveur. Tout est traité, chaque fois avec son test quand c'est possible, sauf un constat accepté et expliqué.
+CyberSAS a été relu trois fois. D'abord par trois relecteurs indépendants et une revue de sécurité : 46 constats, dont 3 hauts. Puis aux outils du métier (govulncheck, staticcheck, gosec, Semgrep, Trivy, Hadolint, ShellCheck, Gixy, fuzzing différentiel contre flynn/noise) : 10 de plus. Enfin sur l'appli et l'admin à distance : 23, dont un haut, une révocation depuis l'appli qui reprenait sans la vérifier la liste du serveur. Tout est traité, chaque fois avec son test quand c'est possible, sauf un constat accepté et expliqué.
 
 <img src="docs/schemas/limites.png" alt="Ce qui est vrai : le serveur ne lit pas ce que deux appareils s'envoient ; un serveur piraté ne fait entrer personne ; retirer quelqu'un coupe ses appareils en cinq secondes ; trois audits, 79 constats, 78 corrigés et un accepté et expliqué. Ce qui ne l'est pas : pas d'audit humain, WireGuard reste le choix raisonnable pour des données sensibles ; le serveur voit les métadonnées ; ce n'est pas un VPN pour naviguer ; la clé du verrou n'a pas encore de secours." width="100%">
 

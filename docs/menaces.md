@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="banniere-menaces.png" alt="Document : le modèle de menace. Contre qui, et jusqu'où : ce que CyberSas protège, ce qu'un attaquant peut encore faire, et ce qu'il ne promet pas." width="100%">
+<img src="banniere-menaces.png" alt="Document : le modèle de menace. Contre qui, et jusqu'où : ce que CyberSAS protège, ce qu'un attaquant peut encore faire, et ce qu'il ne promet pas." width="100%">
 
 </div>
 
 <br>
 
-Ce que CyberSas protège, contre qui, et ce qu'il ne promet pas. Chaque affirmation renvoie à un mécanisme décrit dans [le protocole](protocole.md) ou [le verrou](verrou.md), et la plupart à un test.
+Ce que CyberSAS protège, contre qui, et ce qu'il ne promet pas. Chaque affirmation renvoie à un mécanisme décrit dans [le protocole](protocole.md) ou [le verrou](verrou.md), et la plupart à un test.
 
 
 <a name="ce-qu-on-protege"></a>
@@ -61,7 +61,7 @@ Un voleur qui trouve le téléphone verrouillé n'a rien. S'il le trouve déverr
 <a name="ce-qu-il-ne-promet-pas"></a>
 <img src="sections/menaces/s06.png" alt="06 Ce qu'il ne promet pas" width="100%">
 
-<img src="schemas/menaces/promet-pas.png" alt="Ce que CyberSas ne promet pas. Pas d'audit humain : le protocole reprend WireGuard, suit les vecteurs de Noise, a résisté à des millions de messages forgés et à trois relectures, mais peu de gens l'ont lu ; pour des données dont la fuite serait grave, WireGuard reste le choix raisonnable. Les métadonnées : le serveur voit qui parle à qui, quand et combien. Google, tiers de confiance pour les inscriptions seulement : en panne, personne n'entre mais ceux qui sont dedans continuent ; un compte volé inscrit un appareil, inutile tant que l'admin ne l'a pas signé. Le premier contact : un appareil à qui l'on ne donne pas la clé du verrou retient la première annoncée ; le lien d'invitation la donne d'avance, et l'empreinte permet de vérifier." width="100%">
+<img src="schemas/menaces/promet-pas.png" alt="Ce que CyberSAS ne promet pas. Pas d'audit humain : le protocole reprend WireGuard, suit les vecteurs de Noise, a résisté à des millions de messages forgés et à trois relectures, mais peu de gens l'ont lu ; pour des données dont la fuite serait grave, WireGuard reste le choix raisonnable. Les métadonnées : le serveur voit qui parle à qui, quand et combien. Google, tiers de confiance pour les inscriptions seulement : en panne, personne n'entre mais ceux qui sont dedans continuent ; un compte volé inscrit un appareil, inutile tant que l'admin ne l'a pas signé. Le premier contact : un appareil à qui l'on ne donne pas la clé du verrou retient la première annoncée ; le lien d'invitation la donne d'avance, et l'empreinte permet de vérifier." width="100%">
 
 Les relectures, leurs constats et ce qui en a été fait : [l'audit](audit.md).
 
@@ -69,7 +69,7 @@ Les relectures, leurs constats et ce qui en a été fait : [l'audit](audit.md).
 
 <div align="center">
 
-<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSas en un coup d’œil." width="49%"></a>
+<a href="../README.md"><img src="nav/readme.png" alt="Le README : CyberSAS en un coup d’œil." width="49%"></a>
 <a href="protocole.md"><img src="nav/protocole.png" alt="Le protocole : les deux couches, Noise IK, les messages à l’échelle, le filtre." width="49%"></a>
 <a href="verrou.md"><img src="nav/verrou.png" alt="Le verrou : la chaîne de confiance, le coffre du téléphone, signer et révoquer." width="49%"></a>
 <a href="audit.md"><img src="nav/audit.png" alt="L’audit de sécurité : trois relectures, 79 constats." width="49%"></a>

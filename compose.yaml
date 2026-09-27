@@ -1,4 +1,4 @@
-# CyberSas : la pile qui tourne sur le serveur public (le VPS).
+# CyberSAS : la pile qui tourne sur le serveur public (le VPS).
 #
 # sasd est tout le VPN : le moteur du tunnel, l'API où les appareils
 # s'inscrivent, le relais chiffré entre appareils, le pare-feu du serveur et

@@ -13,12 +13,12 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/Cybertrist/CyberSas/internal/b64"
+	"github.com/Cybertrist/CyberSAS/internal/b64"
 
-	"github.com/Cybertrist/CyberSas/internal/base"
-	"github.com/Cybertrist/CyberSas/internal/politique"
-	"github.com/Cybertrist/CyberSas/internal/protocole"
-	"github.com/Cybertrist/CyberSas/internal/verrou"
+	"github.com/Cybertrist/CyberSAS/internal/base"
+	"github.com/Cybertrist/CyberSAS/internal/politique"
+	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 func (s *Serveur) Routes() http.Handler {

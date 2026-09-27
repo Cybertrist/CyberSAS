@@ -187,7 +187,7 @@ ${t(640, 500, 'Suivi des flux : cinq minutes en TCP, une en UDP, trente secondes
     const src = carte(40, yl - 40, 230, 80, 'inondation', 'un flot d’initiations', K.ROUGE, { icone: P.crane });
     const fin = carte(1050, yl - 40, 190, 80, 'sasd', 'répond enfin', K.VERT, { icone: P.serveur });
     const etages = [
-      carte(300, 130, 230, 80, 'mac1', 'la clé du serveur ?', K.BLEU, { icone: P.cle }),
+      carte(300, 130, 230, 80, 'mac1', 'vise-t-il ce serveur ?', K.BLEU, { icone: P.cle }),
       carte(545, 130, 230, 80, 'cookie, mac2', 'sous charge, reçoit-il ?', K.BLEU, { icone: P.onde }),
       carte(790, 130, 230, 80, '10 par seconde', 'par /32 ou /64', K.BLEU, { icone: P.horloge }),
     ];
@@ -213,7 +213,7 @@ ${pastille(etages[0].cx, yl + 66, 'jeté : un hachage', 'ROUGE', { taille: 12 })
 ${pastille(etages[1].cx, yl + 66, 'un cookie, rien d’autre', 'ROUGE', { taille: 12 })}
 ${pastille(etages[2].cx, yl + 66, 'au-delà : attendra', 'ROUGE', { taille: 12 })}
 ${t(640, yl + 130, 'Les poignées de main relayées échappent aux cookies : le serveur les limite par couple d’appareils, le client par pair.', { taille: 13.5, ancre: 'middle' })}`;
-    svg('inondation.svg', 1280, yl + 162, corps, "Trois barrières contre l'inondation, de la moins chère à la plus chère. Un flot d'initiations arrive. Première barrière, mac1 : sans la clé publique du serveur, le message est jeté pour le prix d'un hachage. Deuxième, sous charge : le serveur exige un mac2 calculé avec un cookie, qui prouve que l'expéditeur reçoit bien les paquets envoyés à son adresse ; sinon il ne répond qu'un cookie. Troisième : dix poignées de main par seconde au plus, par réseau /32 en IPv4 et /64 en IPv6. Ce qui passe arrive à sasd. Les poignées de main relayées sont limitées par couple d'appareils chez le serveur et par pair chez le client.");
+    svg('inondation.svg', 1280, yl + 162, corps, "Trois barrières contre l'inondation, de la moins chère à la plus chère. Un flot d'initiations arrive. Première barrière, mac1 : ce qui ne vise pas ce serveur (scan à l'aveugle, paquet au hasard) est jeté pour le prix d'un hachage ; la clé du serveur n'est pas secrète, cette barrière n'arrête pas un attaquant décidé. Deuxième, sous charge : le serveur exige un mac2 calculé avec un cookie, qui prouve que l'expéditeur reçoit bien les paquets envoyés à son adresse ; sinon il ne répond qu'un cookie. Troisième : dix poignées de main par seconde au plus, par réseau /32 en IPv4 et /64 en IPv6. Ce qui passe arrive à sasd. Les poignées de main relayées sont limitées par couple d'appareils chez le serveur et par pair chez le client.");
   }
 }
 

@@ -50,6 +50,9 @@ error_log  /var/log/nginx/erreurs.log warn;
 
 # Dix tentatives de connexion par minute et par adresse, pas plus.
 limit_req_zone $binary_remote_addr zone=connexion:10m rate=10r/m;
+# Le reste de l'API : large, une maison entière derrière la même adresse
+# interroge l'état toutes les quelques secondes, mais pas de martelage.
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
 limit_req_status 429;
 
 # Nom inconnu : on coupe sans répondre, et sans montrer de certificat.

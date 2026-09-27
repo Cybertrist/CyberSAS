@@ -287,7 +287,11 @@ func Construire(r protocole.EtatReseau, ret *Retenu, point netip.AddrPort, maint
 		// disent quelles règles nous concernent.
 		equipe := politique.Equipe{}
 		var apps []politique.Appareil
-		if maCle, err := cle32(ret.MaCle); err == nil && r.Moi.ClePublique == ret.MaCle && certifie(r.Moi, maCle, ret.Moi) {
+		maCle, errCle := cle32(ret.MaCle)
+		if errCle == nil && revoquees[maCle] {
+			// Révoqué : on le dit, plutôt que « pas encore signé ».
+			ecartes = append(ecartes, Ecarte{"cet appareil", ret.Moi.String(), "révoqué par le verrou"})
+		} else if errCle == nil && r.Moi.ClePublique == ret.MaCle && certifie(r.Moi, maCle, ret.Moi) {
 			apps = append(apps, politique.Appareil{Adresse: ret.Moi, Proprietaire: r.Moi.Proprietaire, Etiquette: r.Moi.Etiquette})
 			if r.Moi.Proprietaire != "" {
 				equipe[strings.ToLower(r.Moi.Proprietaire)] = r.Moi.Groupe

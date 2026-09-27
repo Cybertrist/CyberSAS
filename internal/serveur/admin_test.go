@@ -196,8 +196,21 @@ func TestRevocations(t *testing.T) {
 	ka, kb := alice.Appareil.ClePublique, bob.Appareil.ClePublique
 
 	// La liste de « sas.sh revoquer », version 3 : bob.
-	brut, _ := json.Marshal(liste(prive, 3, kb))
+	// Une liste forgée d'abord : le serveur ne doit effacer personne.
+	_, forge, _ := verrou.Generer()
+	brut, _ := json.Marshal(liste(forge, 9, kb))
 	os.WriteFile(b.srv.cfg.Revocations, brut, 0o600)
+	b.srv.Synchroniser()
+	if code := b.appel("GET", protocole.CheminReseau, bob.Jeton, nil, nil); code != http.StatusOK {
+		t.Fatalf("une liste mal signée a coupé bob : %d", code)
+	}
+	brut, _ = json.Marshal(liste(prive, 3, kb))
+	os.WriteFile(b.srv.cfg.Revocations, brut, 0o600)
+	// La synchronisation retire bob : le serveur ne lui parle plus.
+	b.srv.Synchroniser()
+	if code := b.appel("GET", protocole.CheminReseau, bob.Jeton, nil, nil); code != http.StatusUnauthorized {
+		t.Errorf("bob révoqué en ligne de commande répond encore : %d", code)
+	}
 
 	if code := b.appel("POST", protocole.CheminRevocations, alice.Jeton, liste(prive, 4, kb, ka), nil); code != http.StatusForbidden {
 		t.Errorf("révoquer sans être admin : %d, 403 attendu", code)

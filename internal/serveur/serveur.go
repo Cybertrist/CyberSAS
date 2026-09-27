@@ -181,6 +181,7 @@ func (s *Serveur) Synchroniser() error {
 	// Les retraits d'abord, et quoi qu'il arrive à la politique : une faute
 	// de frappe dans politique.json ne doit pas maintenir un accès révoqué.
 	now := time.Now()
+	revoquees := s.clesRevoquees()
 	var gardes, sortis []base.Appareil
 	personnels := 0
 	for _, a := range appareils {
@@ -188,6 +189,10 @@ func (s *Serveur) Synchroniser() error {
 			personnels++
 		}
 		switch {
+		case revoquee(revoquees, a.ClePublique):
+			// Révoqué par « sas.sh revoquer » : les autres appareils le
+			// refusent déjà, le serveur cesse aussi de lui parler.
+			s.retirer(a, "révoqué par le verrou")
 		case !a.Expire.IsZero() && now.After(a.Expire):
 			// Même si l'effacement échoue, l'appareil n'est pas gardé : son
 			// accès est coupé, et l'effacement sera retenté au prochain tour.
@@ -362,6 +367,42 @@ func (s *Serveur) documentsSignes(e *protocole.EtatReseau) {
 // celle de « sas.sh revoquer » et de celle venue de l'appli. Aucune : nil.
 func (s *Serveur) Revocations() *protocole.ListeRevocations {
 	return RevocationsEnVigueur(s.cfg.Revocations, s.cfg.RevocationsAppli)
+}
+
+// clesRevoquees : les clés de la liste de révocation en vigueur, seulement
+// si elle est bien signée par le verrou (un fichier forgé ne doit pas
+// permettre d'effacer des appareils).
+func (s *Serveur) clesRevoquees() map[[32]byte]bool {
+	l := s.Revocations()
+	pub, _ := s.verrou()
+	if l == nil || pub == nil {
+		return nil
+	}
+	var cles [][32]byte
+	for _, c := range l.Cles {
+		k, err := b64.Cle32(c)
+		if err != nil {
+			return nil
+		}
+		cles = append(cles, k)
+	}
+	sig, err := b64.Decoder(l.Signature)
+	if err != nil || !verrou.VerifierRevocations(pub, l.Version, cles, sig) {
+		s.journal.Error("liste de révocation mal signée, ignorée", "evenement", "revocation")
+		return nil
+	}
+	r := make(map[[32]byte]bool, len(cles))
+	for _, k := range cles {
+		r[k] = true
+	}
+	return r
+}
+
+// revoquee compare sur les octets de la clé, jamais sur son écriture en
+// base64 (voir client.adopterRevocations).
+func revoquee(revoquees map[[32]byte]bool, cle string) bool {
+	k, err := b64.Cle32(cle)
+	return err == nil && revoquees[k]
 }
 
 // RevocationsEnVigueur : la plus récente des listes lisibles parmi ces

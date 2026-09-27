@@ -85,7 +85,7 @@ grille "$S/menaces/adversaires.png" 3 \
   "wifi|Qui écoute le réseau|Wi-Fi d'un café, opérateur. Il voit des paquets UDP chiffrés, leur taille arrondie à 16 octets, les IP publiques. Ni le contenu, ni l'identité : la clé statique voyage chiffrée." \
   "dns|L'hébergeur du VPS|Il voit qui parle à qui, quand, et combien. Pas ce qui se dit : le serveur relaie avec une clé qu'il n'a pas. Le labo le vérifie par une capture sur le serveur." \
   "replay|Qui rejoue ou modifie|Un paquet modifié échoue à son tag, un rejoué porte un compteur déjà vu, une initiation rejouée un horodatage trop vieux. Tout est jeté en silence." \
-  "waves|Qui inonde|Sans la clé publique du serveur, jeté au premier hachage. Avec, et sous charge : un cookie à prouver, puis dix poignées de main par seconde." \
+  "waves|Qui inonde|Un scan à l'aveugle est jeté au premier hachage. Qui vise vraiment le serveur, sous charge : un cookie à prouver, puis dix poignées de main par seconde." \
   "door_front|Qui veut entrer|Il lui faut un jeton Google de l'équipe ou une invitation à usage unique, prouver qu'il tient sa clé privée, puis la signature de l'admin." \
   "person_alert|Un membre qui va trop loin|Il n'atteint que ce que la politique autorise, ne prend ni l'adresse ni le nom d'un autre, ne rebondit pas vers un réseau local. Le retirer le coupe en cinq secondes."
 

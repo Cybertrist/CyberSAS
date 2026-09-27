@@ -19,14 +19,14 @@ Ce que CyberSAS protège, contre qui, et ce qu'il ne promet pas. Chaque affirmat
 
 <img src="schemas/menaces/surface.svg" alt="La surface d'attaque. Quelqu'un sur Internet scanne. Sur le VPS, seul point public : le port UDP 51820 du tunnel reste muet sans mac1 valide ; le port TCP 443 ne sert que vpn., auth. et maison., tout autre nom est coupé avant l'échange de certificat ; le port TCP 80 ne fait que rediriger vers 443. À la maison, aucun port ouvert : rien n'écoute. L'API de sasd n'écoute que sur 127.0.0.1, derrière Nginx." width="100%">
 
-- **UDP 51820**, le tunnel. Il ne répond qu'à une initiation portant un mac1 valide, donc calculé avec la clé publique du serveur, que seuls les appareils inscrits connaissent, et venant d'une clé inscrite. À tout le reste, il ne répond rien : un scan ne voit qu'un port muet.
+- **UDP 51820**, le tunnel. Il ne répond qu'à une initiation portant un mac1 valide, donc calculé avec la clé publique du serveur, et venant d'une clé inscrite. À tout le reste, il ne répond rien : un scan à l'aveugle ne voit qu'un port muet. Cette clé n'est pas secrète pour autant : l'API la donne à qui la demande, puisqu'un appareil en a besoin avant de s'inscrire. Contre qui la connaît et inonde, ce sont le cookie et la limite de dix poignées de main par seconde qui tiennent, pas le mac1.
 - **TCP 443**, pour trois noms : `vpn.` (l'API d'inscription), `auth.` (la connexion Google des pages web) et `maison.` (un service publié). Tout autre nom est coupé avant même l'échange de certificat.
 - **TCP 80**, qui ne fait que rediriger.
 
 <a name="contre-qui"></a>
 <img src="sections/menaces/s03.png" alt="03 Contre qui" width="100%">
 
-<img src="schemas/menaces/adversaires.png" alt="Six adversaires. Qui écoute le réseau voit des paquets UDP chiffrés, leur taille arrondie à 16 octets, les IP publiques, mais ni le contenu ni l'identité. L'hébergeur du VPS voit qui parle à qui, quand et combien, pas ce qui se dit. Qui rejoue ou modifie des paquets est rejeté en silence. Qui inonde est jeté au premier hachage, puis doit prouver un cookie, puis se limiter à dix poignées de main par seconde. Qui veut entrer doit avoir un jeton Google de l'équipe ou une invitation à usage unique, prouver sa clé privée, puis obtenir la signature de l'admin. Un membre qui va trop loin n'atteint que ce que la politique autorise et se fait couper en cinq secondes." width="100%">
+<img src="schemas/menaces/adversaires.png" alt="Six adversaires. Qui écoute le réseau voit des paquets UDP chiffrés, leur taille arrondie à 16 octets, les IP publiques, mais ni le contenu ni l'identité. L'hébergeur du VPS voit qui parle à qui, quand et combien, pas ce qui se dit. Qui rejoue ou modifie des paquets est rejeté en silence. Qui inonde à l'aveugle est jeté au premier hachage ; qui vise vraiment le serveur doit prouver un cookie, puis se limiter à dix poignées de main par seconde. Qui veut entrer doit avoir un jeton Google de l'équipe ou une invitation à usage unique, prouver sa clé privée, puis obtenir la signature de l'admin. Un membre qui va trop loin n'atteint que ce que la politique autorise et se fait couper en cinq secondes." width="100%">
 
 Quelques précisions que les fiches ne disent pas :
 

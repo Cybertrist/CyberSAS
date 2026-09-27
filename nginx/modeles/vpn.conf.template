@@ -20,12 +20,14 @@ server {
     # Les certificats et les listes de révocation signés sur le téléphone
     # de l'admin : sasd les accepte jusqu'à 256 Ko, Nginx aussi.
     location ~ ^/api/v1/(signatures|revocations)$ {
+        limit_req zone=api burst=20 nodelay;
         client_max_body_size 256k;
         include /etc/nginx/extraits/proxy.conf;
         proxy_pass $sasd;
     }
 
     location /api/ {
+        limit_req zone=api burst=40 nodelay;
         client_max_body_size 16k;
         include /etc/nginx/extraits/proxy.conf;
         proxy_pass $sasd;

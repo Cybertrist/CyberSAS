@@ -247,3 +247,27 @@ func TestAllongerRevocationsPlafond(t *testing.T) {
 		t.Fatal("version au plafond acceptée")
 	}
 }
+
+// Un appareil révoqué garde un certificat valide : il doit se savoir
+// révoqué, n'accepter personne, et ne pas se croire « pas encore signé ».
+func TestVerrouCetAppareilRevoque(t *testing.T) {
+	r := nouveauReseauSigne(t)
+	k, _ := cle32(r.etat.Moi.ClePublique)
+	r.etat.Revocations = &protocole.ListeRevocations{Version: 2, Cles: []string{r.etat.Moi.ClePublique},
+		Signature: base64.StdEncoding.EncodeToString(verrou.SignerRevocations(r.prive, 2, [][32]byte{k}))}
+	pairs, ecartes := r.construire(t)
+	for _, p := range pairs {
+		if len(p.Entrant) != 0 {
+			t.Fatal("révoqué, rien ne doit pouvoir entrer")
+		}
+	}
+	vu := false
+	for _, e := range ecartes {
+		if e.Nom == "cet appareil" {
+			vu = e.Raison == "révoqué par le verrou"
+		}
+	}
+	if !vu {
+		t.Fatalf("le client doit dire qu'il est révoqué : %+v", ecartes)
+	}
+}

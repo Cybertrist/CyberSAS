@@ -687,7 +687,7 @@ class Reseau extends ChangeNotifier {
   }
 
   /// Rejoint le réseau de l'invitation. Rend l'erreur à afficher, ou null.
-  Future<String?> rejoindre(Invitation i, {String nom = ''}) async {
+  Future<String?> rejoindre(Invitation i, {String nom = '', String jeton = ''}) async {
     if (!reel) {
       serveur = i.hote;
       cleVerrou = i.verrou;
@@ -696,7 +696,7 @@ class Reseau extends ChangeNotifier {
       return null;
     }
     try {
-      await Moteur.rejoindre(i, nom: nom);
+      await Moteur.rejoindre(i, nom: nom, jeton: jeton);
     } on ErreurMoteur catch (e) {
       return e.message;
     }
@@ -989,7 +989,7 @@ String duree(Duration d) {
 }
 
 /// La version affichée dans « À propos » (même valeur que pubspec.yaml).
-const versionAppli = '0.7.0';
+const versionAppli = '0.8.0';
 
 /// « tristan.joncour@gmail.com » → « Tristan » : de quoi nommer quelqu'un
 /// sans son nom complet.

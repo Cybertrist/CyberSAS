@@ -232,11 +232,31 @@ func Inviter(dossier, utilisateur string, minutes int) (string, error) {
 	if err := appel(dossier, "POST", protocole.CheminInvitation, protocole.DemandeInvitation{Utilisateur: utilisateur, Minutes: minutes}, &r); err != nil {
 		return "", err
 	}
-	v := url.Values{"serveur": {e.Serveur}, "cle": {r.Cle}, "verrou": {e.Retenu.Verrou}}
+	return lienRejoindre(e, r.Cle), nil
+}
+
+// LienReseau : le lien permanent du réseau, sans clé d'inscription. Il
+// donne l'adresse du serveur et le verrou à retenir ; la personne se
+// connecte ensuite avec son compte Google de l'équipe. Il ne fait entrer
+// personne à lui seul : il n'a donc pas à rester secret.
+func LienReseau(dossier string) (string, error) {
+	e, err := appareil.Stockage{Dossier: dossier}.Lire()
+	if err != nil {
+		return "", errors.New("pas inscrit")
+	}
+	return lienRejoindre(e, ""), nil
+}
+
+// lienRejoindre : cybersas://rejoindre, avec ou sans clé d'inscription.
+func lienRejoindre(e appareil.Etat, cle string) string {
+	v := url.Values{"serveur": {e.Serveur}, "verrou": {e.Retenu.Verrou}}
+	if cle != "" {
+		v.Set("cle", cle)
+	}
 	if e.Autorite != "" {
 		v.Set("autorite", base64.StdEncoding.EncodeToString([]byte(e.Autorite)))
 	}
-	return "cybersas://rejoindre?" + v.Encode(), nil
+	return "cybersas://rejoindre?" + v.Encode()
 }
 
 // Revoquer ajoute les clés (séparées par des virgules) à la liste de

@@ -8,14 +8,16 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../composants.dart';
 import '../etat.dart';
+import '../google.dart';
 import '../icones.dart';
 import '../moteur.dart';
 import '../theme.dart';
 
-/// Rejoindre un réseau. L'admin envoie une invitation (sas.sh invitation) :
-/// un lien cybersas:// qui porte l'adresse du serveur, une clé
-/// d'inscription à usage unique et la clé publique du verrou. Ouvert sur
-/// le téléphone, il amène ici ; on peut aussi le coller.
+/// Rejoindre un réseau. L'admin envoie un lien cybersas:// qui porte
+/// l'adresse du serveur et la clé publique du verrou : une invitation, avec
+/// une clé d'inscription à usage unique, ou le lien du réseau, sans clé,
+/// où l'on se connecte ensuite avec son compte Google de l'équipe. Ouvert
+/// sur le téléphone, il amène ici ; on peut aussi le coller.
 class EcranConnexion extends StatefulWidget {
   const EcranConnexion({super.key});
 
@@ -68,7 +70,7 @@ class _EcranConnexionState extends State<EcranConnexion> {
     final i = Invitation.lire(d?.text ?? '');
     setState(() {
       _invitation = i;
-      _erreur = i == null ? "Ce n'est pas une invitation CyberSAS : copie le lien cybersas:// en entier." : null;
+      _erreur = i == null ? "Ce n'est pas un lien CyberSAS : copie le lien cybersas:// en entier." : null;
     });
   }
 
@@ -79,7 +81,24 @@ class _EcranConnexionState extends State<EcranConnexion> {
       _enCours = true;
       _erreur = null;
     });
-    final erreur = await EtatReseau.of(context).rejoindre(i, nom: _nom.text.trim());
+    final r = EtatReseau.of(context);
+    var jeton = '';
+    if (i.parGoogle) {
+      final (j, e) = await jetonGoogle();
+      if (!mounted) return;
+      if (j == null) {
+        // Fenêtre fermée : on revient sans rien dire.
+        setState(() {
+          _enCours = false;
+          _erreur = e;
+        });
+        return;
+      }
+      jeton = j;
+    }
+    final erreur = await r.rejoindre(i, nom: _nom.text.trim(), jeton: jeton);
+    // Le jeton a servi : Google redemandera le compte la prochaine fois.
+    if (i.parGoogle) await oublierGoogle();
     if (!mounted) return;
     setState(() {
       _enCours = false;
@@ -127,7 +146,9 @@ class _EcranConnexionState extends State<EcranConnexion> {
                   ),
                   const SizedBox(height: 16),
                   if (i == null)
-                    BoutonContour(libelle: "Coller l'invitation", ico: Ico.cle, hauteur: 54, onTap: _coller)
+                    BoutonContour(libelle: 'Coller le lien', ico: Ico.cle, hauteur: 54, onTap: _coller)
+                  else if (i.parGoogle)
+                    _BoutonGoogle(libelle: _enCours ? 'Inscription…' : 'Continuer avec Google', onTap: _enCours ? null : _rejoindre)
                   else
                     BoutonContour(
                       libelle: _enCours ? 'Inscription…' : 'Rejoindre le réseau',
@@ -137,9 +158,11 @@ class _EcranConnexionState extends State<EcranConnexion> {
                     ),
                   const SizedBox(height: 12),
                   if (i == null)
+                    // Google ne dit pas à quel réseau aller : il faut d'abord
+                    // le lien de l'admin, qui donne le serveur et le verrou.
                     _BoutonGoogle(
                       onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text("La connexion Google arrive bientôt. En attendant, demande une invitation à l'admin."),
+                        content: Text("Ouvre d'abord le lien du réseau que l'admin t'a envoyé, puis continue avec Google."),
                       )),
                     )
                   else
@@ -193,11 +216,11 @@ class _Explication extends StatelessWidget {
   Widget build(BuildContext context) => Carte(
         padding: const EdgeInsets.all(18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Il te faut une invitation', style: texte(16, graisse: 600)),
+          Text("Il te faut le lien de l'admin", style: texte(16, graisse: 600)),
           const SizedBox(height: 8),
           Text(
-            "Demande-la à l'admin du réseau : c'est un lien cybersas://, valable une seule fois et pour une durée limitée. "
-            "Ouvre-le sur ce téléphone, ou copie-le puis colle-le ici.",
+            "C'est un lien cybersas:// : le lien du réseau, avec lequel tu te connectes ensuite avec ton compte Google, "
+            "ou une invitation à usage unique. Ouvre-le sur ce téléphone, ou copie-le puis colle-le ici.",
             style: texte(13.5, couleur: Couleurs.secondaire, hauteur: 1.45),
           ),
         ]),
@@ -232,10 +255,10 @@ class _CarteInvitation extends StatelessWidget {
       halo: haloCarte(),
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Etiquette('Invitation reçue', couleur: Couleurs.cyan),
+        Etiquette(i.parGoogle ? 'Lien du réseau' : 'Invitation reçue', couleur: Couleurs.cyan),
         const SizedBox(height: 6),
         ligne(Ico.serveurLigne, 'Serveur', i.hote),
-        ligne(Ico.cle, "Clé d'inscription", 'usage unique'),
+        if (i.parGoogle) ligne(Ico.cle, 'Entrée', 'compte Google') else ligne(Ico.cle, "Clé d'inscription", 'usage unique'),
         ligne(Ico.bouclier, 'Verrou', i.verrou.isEmpty ? 'aucun' : empreinteCle(i.verrou), monoValeur: true),
         if (i.autorite.isNotEmpty) ligne(Ico.info, 'Certificat', 'autorité du labo'),
         // Sans verrou dans le lien, l'appareil croira le premier qu'on lui
@@ -262,7 +285,10 @@ class _CarteInvitation extends StatelessWidget {
           ),
         const SizedBox(height: 6),
         Text(
-          "Cet appareil crée sa clé ici, elle n'en sortira pas. L'admin devra ensuite le signer.",
+          i.parGoogle
+              ? "Seul un compte Google de l'équipe peut entrer. Cet appareil crée sa clé ici, elle n'en sortira pas, "
+                  "puis l'admin devra le signer."
+              : "Cet appareil crée sa clé ici, elle n'en sortira pas. L'admin devra ensuite le signer.",
           style: texte(12.5, couleur: Couleurs.tertiaire, hauteur: 1.4),
         ),
       ]),
@@ -333,8 +359,9 @@ class _Logo extends StatelessWidget {
 }
 
 class _BoutonGoogle extends StatelessWidget {
-  const _BoutonGoogle({required this.onTap});
-  final VoidCallback onTap;
+  const _BoutonGoogle({required this.onTap, this.libelle = 'Continuer avec Google'});
+  final VoidCallback? onTap;
+  final String libelle;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -353,7 +380,7 @@ class _BoutonGoogle extends StatelessWidget {
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 SvgPicture.string(logoGoogle, width: 20, height: 20),
                 const SizedBox(width: 12),
-                Text('Continuer avec Google', style: texte(16, graisse: 600, couleur: Couleurs.fond)),
+                Text(libelle, style: texte(16, graisse: 600, couleur: Couleurs.fond)),
               ]),
             ),
           ),

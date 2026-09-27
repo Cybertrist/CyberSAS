@@ -154,6 +154,7 @@ class MainActivity : FlutterFragmentActivity() {
                     val minutes = appel.argument<Int>("minutes") ?: 10
                     enArriere(reponse) { Pont.inviter(dossier.path, qui, minutes.toLong()) }
                 }
+                "lienReseau" -> enArriere(reponse) { Pont.lienReseau(dossier.path) }
                 "retirer" -> {
                     val cle = appel.argument<String>("cle") ?: ""
                     enArriere(reponse) { Pont.retirer(dossier.path, cle); null }

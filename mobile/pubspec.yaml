@@ -4,7 +4,7 @@ publish_to: 'none'
 
 # Incrémenter à chaque APK envoyé : Android refuse une mise à jour dont
 # le numéro n'augmente pas.
-version: 0.7.0+25
+version: 0.8.0+26
 
 environment:
   sdk: ^3.13.4
@@ -16,6 +16,7 @@ dependencies:
   # Les icônes au trait des maquettes, tracées depuis leur SVG.
   flutter_svg: ^2.3.0
   # Le tunnel de l'accueil reprend les tracés SVG du logo.
+  google_sign_in: ^7.2.0
   local_auth: ^3.0.2
   local_auth_android: ^2.2.0
   path_parsing: ^1.1.0

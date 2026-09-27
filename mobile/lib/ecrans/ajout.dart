@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../composants.dart';
 import '../donnees.dart';
 import '../etat.dart';
+import '../moteur.dart';
 import '../icones.dart';
 import '../theme.dart';
 
@@ -295,6 +296,24 @@ class _AjoutReelState extends State<_AjoutReel> {
 
   String get _duree => _durees.firstWhere((d) => d.$1 == _minutes).$2;
 
+  /// Le lien permanent du réseau : pas de clé, la personne entre avec son
+  /// compte Google de l'équipe, puis l'admin la signe.
+  Future<void> _partagerReseau() async {
+    final messager = ScaffoldMessenger.of(context);
+    final String lien;
+    try {
+      lien = await Moteur.lienReseau();
+    } on ErreurMoteur catch (e) {
+      messager.showSnackBar(SnackBar(content: Text(e.message)));
+      return;
+    }
+    await SharePlus.instance.share(ShareParams(
+      subject: 'Réseau CyberSAS',
+      text: 'Rejoins mon réseau CyberSAS : ouvre ce lien sur ton appareil, où CyberSAS est installé, '
+          "puis connecte-toi avec ton compte Google (il doit être dans l'équipe).\n$lien",
+    ));
+  }
+
   Future<void> _partager() => SharePlus.instance.share(ShareParams(
         subject: 'Invitation CyberSAS',
         text: 'Rejoins mon réseau CyberSAS : ouvre ce lien sur ton appareil, où CyberSAS est installé '
@@ -464,6 +483,12 @@ class _AjoutReelState extends State<_AjoutReel> {
                     ),
                   ),
                   if (bouton != null) ...[const SizedBox(height: 14), bouton],
+                  // Pour les comptes Google de l'équipe : un seul lien, qui sert
+                  // à tous leurs appareils.
+                  if (r.reel && r.admin) ...[
+                    const SizedBox(height: 10),
+                    BoutonFantome(libelle: 'Partager le lien du réseau (Google)', onTap: _partagerReseau),
+                  ],
                 ]),
               ),
             ),

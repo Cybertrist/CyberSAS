@@ -382,3 +382,23 @@ type reponseDNS struct {
 
 func (r *reponseDNS) RemoteAddr() net.Addr       { return r.de }
 func (r *reponseDNS) WriteMsg(m *mdns.Msg) error { r.m = m; return nil }
+
+// Sur Android, le jeton est émis pour le client Web et obtenu par le
+// client Android du même projet : accepté. Un client d'un autre projet,
+// ou un identifiant mal formé, ne passe pas.
+func TestAzpAutorise(t *testing.T) {
+	clients := []string{"113721225113-web.apps.googleusercontent.com"}
+	for azp, attendu := range map[string]bool{
+		"": true,
+		"113721225113-web.apps.googleusercontent.com":      true,
+		"113721225113-android.apps.googleusercontent.com":  true,
+		"999999999999-android.apps.googleusercontent.com":  false,
+		"113721225113-android.exemple.fr":                  false,
+		"x113721225113-android.apps.googleusercontent.com": false,
+		"-android.apps.googleusercontent.com":              false,
+	} {
+		if azpAutorise(clients, azp) != attendu {
+			t.Errorf("azp %q : %v attendu", azp, attendu)
+		}
+	}
+}

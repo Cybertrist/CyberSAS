@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:cybersas/donnees.dart';
 import 'package:cybersas/main.dart';
+import 'package:cybersas/moteur.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -204,5 +205,14 @@ void main() {
     expect(find.text('Certificat signé'), findsNothing);
     await _capturer(t, 'non-signe-detail');
     await _fermer(t, r);
+  });
+
+  test('lien du réseau : sans clé, Google fait entrer, mais le verrou est obligatoire', () {
+    final reseau = Invitation.lire('cybersas://rejoindre?serveur=https%3A%2F%2Fvpn.exemple.fr&verrou=DkF6TQ%3D');
+    expect(reseau, isNotNull);
+    expect(reseau!.parGoogle, isTrue);
+    expect(Invitation.lire('cybersas://rejoindre?serveur=https%3A%2F%2Fvpn.exemple.fr'), isNull);
+    final invitation = Invitation.lire('cybersas://rejoindre?serveur=https%3A%2F%2Fvpn.exemple.fr&cle=sas-abc&verrou=DkF6TQ%3D');
+    expect(invitation!.parGoogle, isFalse);
   });
 }

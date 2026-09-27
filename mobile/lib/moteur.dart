@@ -48,13 +48,13 @@ abstract final class Moteur {
   }
 
   /// Rejoint le réseau de l'[invitation]. Rend l'inscription.
-  static Future<Map<String, dynamic>> rejoindre(Invitation i, {String nom = ''}) async {
+  static Future<Map<String, dynamic>> rejoindre(Invitation i, {String nom = '', String jeton = ''}) async {
     try {
       final s = await _canal.invokeMethod<String>('rejoindre', {
         'serveur': i.serveur,
         'verrou': i.verrou,
         'cle': i.cle,
-        'jeton': '',
+        'jeton': jeton,
         'nom': nom,
         'autorite': i.autorite,
       });
@@ -135,6 +135,10 @@ abstract final class Moteur {
       await _appel<int>('revoquer', {'cles': cles, 'titre': titre, 'detail': detail}) ?? 0;
 
   /// Admin : un lien d'invitation pour un membre de l'équipe.
+  /// Le lien permanent du réseau (serveur et verrou, sans clé) : avec lui
+  /// et un compte Google de l'équipe, un appareil demande à entrer.
+  static Future<String> lienReseau() async => await _appel<String>('lienReseau') ?? '';
+
   static Future<String> inviter(String utilisateur, int minutes) async =>
       await _appel<String>('inviter', {'utilisateur': utilisateur, 'minutes': minutes}) ?? '';
 
@@ -182,8 +186,12 @@ class Invitation {
   /// L'adresse de l'API, https://vpn.exemple.fr.
   final String serveur;
 
-  /// La clé d'inscription, à usage unique.
+  /// La clé d'inscription, à usage unique. Vide : c'est le lien du
+  /// réseau, et la personne se connecte avec son compte Google.
   final String cle;
+
+  /// Le lien du réseau : pas de clé, Google fait entrer.
+  bool get parGoogle => cle.isEmpty;
 
   /// La clé publique du verrou : l'appareil la retient dès le départ.
   final String verrou;
@@ -197,7 +205,9 @@ class Invitation {
     final p = u.queryParameters;
     final serveur = p['serveur'] ?? '';
     final cle = p['cle'] ?? '';
-    if (!serveur.startsWith('https://') || cle.isEmpty) return null;
+    // Sans clé, le lien du réseau doit au moins donner le verrou : c'est
+    // lui qui garantit qu'on parle au bon réseau.
+    if (!serveur.startsWith('https://') || (cle.isEmpty && (p['verrou'] ?? '').isEmpty)) return null;
     var autorite = '';
     if ((p['autorite'] ?? '').isNotEmpty) {
       try {

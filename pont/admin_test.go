@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -153,5 +154,26 @@ func TestRevoquerIgnoreUneListeForgee(t *testing.T) {
 	f.revocations = f.liste
 	if _, err := Revoquer(dossier, graine, autre); err == nil || !strings.Contains(err.Error(), "déjà") {
 		t.Errorf("révoquer deux fois : %v", err)
+	}
+}
+
+// Le lien du réseau porte le serveur, le verrou et l'autorité, jamais de
+// clé d'inscription : il peut circuler sans faire entrer personne.
+func TestLienReseau(t *testing.T) {
+	dossier, _, _, pub := banc(t)
+	lien, err := LienReseau(dossier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := url.Parse(lien)
+	if err != nil || u.Scheme != "cybersas" || u.Host != "rejoindre" {
+		t.Fatalf("lien illisible : %q", lien)
+	}
+	q := u.Query()
+	if q.Has("cle") {
+		t.Fatal("le lien du réseau ne doit pas porter de clé d'inscription")
+	}
+	if q.Get("verrou") != base64.StdEncoding.EncodeToString(pub) || !strings.HasPrefix(q.Get("serveur"), "https://") || q.Get("autorite") == "" {
+		t.Fatalf("lien incomplet : %q", lien)
 	}
 }

@@ -477,13 +477,33 @@ func (s *Serveur) verifierGoogle(ctx context.Context, jeton string) (email, sub 
 	if err := tok.Claims(&c); err != nil {
 		return "", "", err
 	}
-	if c.Azp != "" && !slices.Contains(clients, c.Azp) {
+	if !azpAutorise(clients, c.Azp) {
 		return "", "", fmt.Errorf("jeton obtenu par une autre application (azp)")
 	}
 	if !c.Verifie || c.Email == "" || tok.Subject == "" {
 		return "", "", fmt.Errorf("adresse non vérifiée par Google")
 	}
 	return strings.ToLower(c.Email), tok.Subject, nil
+}
+
+// azpAutorise : la partie qui a obtenu le jeton. Sur Android, le jeton
+// est émis pour le client Web (aud) mais obtenu par le client Android
+// (azp) : on accepte un client de la liste, ou du même projet Google
+// Cloud (le numéro avant le premier tiret), que seul l'admin contrôle.
+func azpAutorise(clients []string, azp string) bool {
+	if azp == "" || slices.Contains(clients, azp) {
+		return true
+	}
+	projet := func(id string) string {
+		n, _, ok := strings.Cut(id, "-")
+		if !ok || n == "" || strings.Trim(n, "0123456789") != "" {
+			return ""
+		}
+		return n
+	}
+	p := projet(azp)
+	return p != "" && strings.HasSuffix(azp, ".apps.googleusercontent.com") &&
+		slices.ContainsFunc(clients, func(c string) bool { return projet(c) == p })
 }
 
 // appliquerPareFeu charge les règles dans le noyau. Variable pour que les

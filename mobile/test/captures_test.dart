@@ -131,6 +131,17 @@ void main() {
     await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-renommer.png'));
   });
 
+  // Les invitations en cours, ouvertes depuis l'écran d'ajout.
+  testWidgets('telephone invitations', (t) async {
+    addTearDown(t.view.reset);
+    await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
+    t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranAjout()));
+    await _attendre(t, 800);
+    await t.tap(find.text('2 invitations en cours'));
+    await _attendre(t, 800);
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-invitations.png'));
+  });
+
   // Les deux demandes signées : laptop-lea et tab-tristan dans la liste.
   testWidgets('telephone appareils-signes', (t) async {
     addTearDown(t.view.reset);

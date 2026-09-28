@@ -155,6 +155,12 @@ class MainActivity : FlutterFragmentActivity() {
                     enArriere(reponse) { Pont.inviter(dossier.path, qui, minutes.toLong()) }
                 }
                 "lienReseau" -> enArriere(reponse) { Pont.lienReseau(dossier.path) }
+                // Les invitations en cours, sans leur clé, et l'annulation.
+                "invitations" -> enArriere(reponse) { Pont.invitations(dossier.path) }
+                "annulerInvitation" -> {
+                    val id = appel.argument<String>("id") ?: ""
+                    enArriere(reponse) { Pont.annulerInvitation(dossier.path, id); null }
+                }
                 "retirer" -> {
                     val cle = appel.argument<String>("cle") ?: ""
                     enArriere(reponse) { Pont.retirer(dossier.path, cle); null }

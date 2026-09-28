@@ -332,6 +332,33 @@ class CodeInvitation {
   }
 }
 
+/// Une invitation pas encore utilisée, vue par l'admin : pour qui, jusqu'à
+/// quand. Jamais la clé : le serveur ne l'a plus.
+class InvitationEnCours {
+  const InvitationEnCours({required this.id, required this.pour, required this.expire, this.machine = false, this.createur = ''});
+
+  InvitationEnCours.json(Map<String, dynamic> j)
+      : id = j['id'] as String? ?? '',
+        pour = j['pour'] as String? ?? '',
+        machine = j['machine'] as bool? ?? false,
+        createur = j['createur'] as String? ?? '',
+        expire = DateTime.fromMillisecondsSinceEpoch(((j['expire'] as num?) ?? 0).toInt() * 1000);
+
+  final String id;
+  final String pour;
+  final bool machine;
+  final String createur;
+  final DateTime expire;
+
+  /// « 42 min », « 3 h 05 » ; « moins d'une minute » à la fin.
+  String get reste {
+    final d = expire.difference(DateTime.now());
+    if (d.inMinutes < 1) return "moins d'une minute";
+    if (d.inHours == 0) return '${d.inMinutes} min';
+    return '${d.inHours} h ${(d.inMinutes % 60).toString().padLeft(2, '0')}';
+  }
+}
+
 /// L'état de l'appli, partagé par tous les écrans.
 class Reseau extends ChangeNotifier {
   /// Le réseau d'exemple (démo, captures d'écran).
@@ -878,6 +905,44 @@ class Reseau extends ChangeNotifier {
       }
     }
     appareils.removeWhere((x) => x.adresse == a.adresse);
+    notifyListeners();
+    return null;
+  }
+
+  /// Les invitations en cours (admin). Dans la démo, deux inventées.
+  late final invitations = <InvitationEnCours>[
+    if (!reel) ...[
+      InvitationEnCours(id: 'a1', pour: 'lea.martin@gmail.com', createur: 'tristan@exemple.fr', expire: DateTime.now().add(const Duration(minutes: 42))),
+      InvitationEnCours(id: 'b2', pour: 'nas', machine: true, expire: DateTime.now().add(const Duration(hours: 18, minutes: 5))),
+    ],
+  ];
+
+  /// Relit les invitations en cours sur le serveur. Rend l'erreur, ou null.
+  Future<String?> chargerInvitations() async {
+    if (!reel || !admin) return null;
+    try {
+      final liste = await Moteur.invitations();
+      invitations
+        ..clear()
+        ..addAll(liste.map(InvitationEnCours.json));
+    } on ErreurMoteur catch (e) {
+      return e.message;
+    }
+    notifyListeners();
+    return null;
+  }
+
+  /// Annule [i] : le lien envoyé ne fait plus entrer personne. Rend
+  /// l'erreur, ou null.
+  Future<String?> annulerInvitation(InvitationEnCours i) async {
+    if (reel) {
+      try {
+        await Moteur.annulerInvitation(i.id);
+      } on ErreurMoteur catch (e) {
+        return e.message;
+      }
+    }
+    invitations.removeWhere((x) => x.id == i.id);
     notifyListeners();
     return null;
   }

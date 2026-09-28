@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cybersas/donnees.dart';
+import 'package:cybersas/ecrans/ajout.dart';
 import 'package:cybersas/main.dart';
 import 'package:cybersas/moteur.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,9 @@ Map<String, dynamic> _pair(String nom, String adresse,
       if (expire != null) 'expire': expire.toUtc().toIso8601String(),
     };
 
+/// Les invitations annulées par l'appli, telles que le moteur les a reçues.
+final _annulees = <String>[];
+
 final _serveur = {'nom': 'serveur', 'adresse': '10.77.0.1', 'etiquette': 'serveur', 'serveur': true, 'en_ligne': false, 'signe': true};
 
 /// Ouvre l'appli sur un faux moteur. [etat] répond à « etat », [reseau] à
@@ -79,6 +83,15 @@ Future<Reseau> _ouvrir(
         return jsonEncode({'pairs': reseau});
       case 'appareils':
         return '[]';
+      case 'invitations':
+        return jsonEncode([
+          if (!_annulees.contains('0123456789abcdef'))
+            {'id': '0123456789abcdef', 'pour': 'lea@exemple.fr', 'machine': false, 'createur': 'tristan@exemple.fr', 'cree': 0,
+             'expire': DateTime.now().add(const Duration(minutes: 30)).millisecondsSinceEpoch ~/ 1000},
+        ]);
+      case 'annulerInvitation':
+        _annulees.add(appel.arguments['id'] as String);
+        return null;
       case 'coffrePresent':
         return false;
     }
@@ -204,6 +217,27 @@ void main() {
     expect(find.text('Pas encore signé'), findsOneWidget);
     expect(find.text('Certificat signé'), findsNothing);
     await _capturer(t, 'non-signe-detail');
+    await _fermer(t, r);
+  });
+
+  testWidgets('invitation en cours : annulée sur le serveur après confirmation', (t) async {
+    final r = await _ouvrir(t, etat: coupe, reseau: [_serveur, _pair('fold8-tristan', '10.77.0.66', moi: true)]);
+    t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranAjout()));
+    await _laisser(t);
+    await t.tap(find.text('1 invitation en cours'));
+    await _laisser(t);
+    expect(find.text('lea@exemple.fr'), findsOneWidget);
+    await _capturer(t, 'invitations-en-cours');
+    await t.tap(find.text('Annuler'));
+    await _laisser(t);
+    // Rien ne part avant la confirmation.
+    expect(_annulees, isEmpty);
+    await _capturer(t, 'invitation-annuler');
+    await t.tap(find.text('Annuler').last);
+    await _laisser(t);
+    expect(_annulees, ['0123456789abcdef']);
+    expect(find.text('lea@exemple.fr'), findsNothing);
+    expect(find.text('Invitation annulée'), findsOneWidget);
     await _fermer(t, r);
   });
 

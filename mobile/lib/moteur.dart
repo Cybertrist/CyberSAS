@@ -142,6 +142,14 @@ abstract final class Moteur {
   static Future<String> inviter(String utilisateur, int minutes) async =>
       await _appel<String>('inviter', {'utilisateur': utilisateur, 'minutes': minutes}) ?? '';
 
+  /// Admin : les invitations pas encore utilisées (pont.EnCours), sans
+  /// leur clé.
+  static Future<List<Map<String, dynamic>>> invitations() async =>
+      (jsonDecode(await _appel<String>('invitations') ?? '[]') as List).cast<Map<String, dynamic>>();
+
+  /// Admin : annule l'invitation [id] ; elle ne fait plus entrer personne.
+  static Future<void> annulerInvitation(String id) => _appel<void>('annulerInvitation', {'id': id});
+
   /// Admin : retire un appareil du serveur.
   static Future<void> retirer(String cle) => _appel<void>('retirer', {'cle': cle});
 

@@ -121,6 +121,7 @@ class _EcranAjoutState extends State<EcranAjout> {
                         ),
                         const SizedBox(height: 14),
                         const _Etapes(),
+                        const _LigneInvitations(),
                       ]),
                     ),
                   ),
@@ -269,6 +270,15 @@ class _AjoutReelState extends State<_AjoutReel> {
   Timer? _horloge;
 
   @override
+  void initState() {
+    super.initState();
+    // Les invitations déjà envoyées, pour pouvoir en annuler une.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) EtatReseau.of(context).chargerInvitations();
+    });
+  }
+
+  @override
   void dispose() {
     _qui.dispose();
     _horloge?.cancel();
@@ -282,8 +292,10 @@ class _AjoutReelState extends State<_AjoutReel> {
       _enCours = true;
       _erreur = null;
     });
-    final (lien, e) = await EtatReseau.of(context).inviter(_qui.text.trim(), _minutes);
+    final r = EtatReseau.of(context);
+    final (lien, e) = await r.inviter(_qui.text.trim(), _minutes);
     if (!mounted) return;
+    if (e == null) r.chargerInvitations();
     setState(() {
       _enCours = false;
       _erreur = e;
@@ -479,6 +491,7 @@ class _AjoutReelState extends State<_AjoutReel> {
                         ),
                         const SizedBox(height: 14),
                         corps,
+                        const _LigneInvitations(),
                       ]),
                     ),
                   ),
@@ -497,4 +510,155 @@ class _AjoutReelState extends State<_AjoutReel> {
       ),
     );
   }
+}
+
+/// « 2 invitations en cours › », seulement pour un admin et s'il y en a :
+/// ouvre la liste, où chacune s'annule.
+class _LigneInvitations extends StatelessWidget {
+  const _LigneInvitations();
+
+  @override
+  Widget build(BuildContext context) {
+    final r = EtatReseau.of(context);
+    final n = r.invitations.length;
+    if (!r.admin || n == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Carte(
+        child: LigneReglage(
+          ico: Ico.horloge,
+          libelle: n == 1 ? '1 invitation en cours' : '$n invitations en cours',
+          separateur: false,
+          fin: const Chevron(),
+          onTap: () => montrerInvitations(context),
+        ),
+      ),
+    );
+  }
+}
+
+/// Les invitations pas encore utilisées : pour qui, expire dans combien de
+/// temps, et Annuler. Une fenêtre centrée qui suit la liste.
+Future<void> montrerInvitations(BuildContext context) async {
+  final r = EtatReseau.of(context);
+  final messager = ScaffoldMessenger.of(context);
+  r.chargerInvitations();
+  await showDialog<void>(
+    context: context,
+    barrierColor: const Color(0xA8020407),
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Bordee(
+          bordure: Bords.reflet,
+          fond: const Color(0xFF0A1119),
+          rayon: 24,
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+          child: ListenableBuilder(
+            listenable: r,
+            builder: (context, _) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text('Invitations en cours', style: texte(20, graisse: 600, espacement: -0.4)),
+              const SizedBox(height: 6),
+              Text(
+                r.invitations.isEmpty
+                    ? 'Aucune : toutes ont servi ou expiré.'
+                    : 'Pas encore utilisées. Une invitation annulée ne fait plus entrer personne.',
+                style: texte(13.5, couleur: Couleurs.secondaire, hauteur: 1.4),
+              ),
+              if (r.invitations.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(children: [
+                      for (final i in r.invitations)
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            border: i == r.invitations.last ? null : const Border(bottom: BorderSide(color: Couleurs.separateur)),
+                          ),
+                          child: Row(children: [
+                            Icone(i.machine ? Ico.serveur : Ico.etiquette, taille: 18),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(i.machine ? 'Machine « ${i.pour} »' : i.pour,
+                                    maxLines: 1, overflow: TextOverflow.ellipsis, style: texte(14.5, graisse: 600)),
+                                const SizedBox(height: 2),
+                                Text('Expire dans ${i.reste}', style: texte(12.5, couleur: Couleurs.secondaire)),
+                              ]),
+                            ),
+                            const SizedBox(width: 4),
+                            TextButton(
+                              onPressed: () => _annulerInvitation(context, i, messager),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Couleurs.rougeClair,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: const Size(0, 40),
+                              ),
+                              child: Text('Annuler', style: texte(13.5, graisse: 600, couleur: Couleurs.rougeClair)),
+                            ),
+                          ]),
+                        ),
+                    ]),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              BoutonFantome(libelle: 'Fermer', onTap: () => Navigator.pop(context)),
+            ]),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Confirme, puis annule [i] sur le serveur.
+Future<void> _annulerInvitation(BuildContext context, InvitationEnCours i, ScaffoldMessengerState messager) async {
+  final r = EtatReseau.of(context);
+  final oui = await showDialog<bool>(
+    context: context,
+    barrierColor: const Color(0xA8020407),
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Bordee(
+          bordure: Bords.accent(Couleurs.rouge),
+          fond: const Color(0xFF0A1119),
+          rayon: 24,
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text("Annuler l'invitation ?", style: texte(20, graisse: 600, espacement: -0.4)),
+            const SizedBox(height: 12),
+            Text(
+              i.machine
+                  ? "La clé d'inscription de la machine « ${i.pour} » ne servira plus. Il en faudra une nouvelle pour l'ajouter."
+                  : "Le lien envoyé à ${i.pour} ne fera plus entrer personne. Pour l'inviter à nouveau, il faudra un nouveau lien.",
+              style: texte(14, couleur: Couleurs.secondaire, hauteur: 1.4),
+            ),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(child: BoutonFantome(libelle: 'Garder', onTap: () => Navigator.pop(context, false))),
+              const SizedBox(width: 10),
+              Expanded(
+                child: BoutonFantome(
+                  libelle: 'Annuler',
+                  couleur: Couleurs.rougeClair,
+                  bord: Couleurs.rouge.withValues(alpha: 0.45),
+                  onTap: () => Navigator.pop(context, true),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    ),
+  );
+  if (oui != true) return;
+  final e = await r.annulerInvitation(i);
+  messager.showSnackBar(SnackBar(content: Text(e ?? 'Invitation annulée')));
 }

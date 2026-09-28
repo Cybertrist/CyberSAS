@@ -153,6 +153,16 @@ abstract final class Moteur {
   /// Admin : retire un appareil du serveur.
   static Future<void> retirer(String cle) => _appel<void>('retirer', {'cle': cle});
 
+  /// Admin : l'équipe du serveur (pont.Membre : adresse, groupe, moi).
+  static Future<List<Map<String, dynamic>>> equipe() async =>
+      (jsonDecode(await _appel<String>('equipe') ?? '[]') as List).cast<Map<String, dynamic>>();
+
+  /// Admin : met [adresse] dans [groupe] (admins ou equipe) ; groupe vide,
+  /// elle sort de l'équipe. Rend la nouvelle équipe, comme [equipe].
+  static Future<List<Map<String, dynamic>>> changerMembre(String adresse, String groupe) async =>
+      (jsonDecode(await _appel<String>('changerMembre', {'adresse': adresse, 'groupe': groupe}) ?? '[]') as List)
+          .cast<Map<String, dynamic>>();
+
   /// Le nom du téléphone dans ses réglages (« Galaxy Z Fold8 »), sinon
   /// son modèle.
   static Future<String> nomAppareil() async {

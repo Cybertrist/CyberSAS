@@ -70,18 +70,18 @@ Chaque appareil applique lui-même ce qui le concerne : le serveur ne voit pas l
 
 L'équipe, c'est la liste des comptes Google qui ont le droit de rejoindre le réseau, chacun dans un groupe : `admins` ou `equipe`. Le reste se fait depuis le téléphone de l'admin.
 
-<img src="docs/schemas/equipe.png" alt="Six gestes. Inviter : l'admin choisit un membre de l'équipe et une durée, 10 minutes, une heure ou un jour, et l'appli partage un lien cybersas:// à usage unique qui porte la clé du verrou. Signer : la demande arrive avec l'empreinte, l'adresse et le groupe ; l'admin compare puis signe avec son doigt ; si le serveur change un champ entre-temps, rien n'est signé. Renommer : chacun ses appareils, l'admin tous ; le nom affiché ne fait pas partie du certificat. Retirer : un appareil dont on ne veut plus est coupé tout de suite, mais pourrait se réinscrire. Révoquer : pour un appareil volé, la liste de révocation est signée sur le téléphone de l'admin, et aucun appareil ne revient à une liste plus ancienne. L'équipe elle-même : la liste des comptes vit sur le serveur, dans equipe.txt, et se règle pour l'instant en ligne de commande." width="100%">
+<img src="docs/schemas/equipe.png" alt="Six gestes. Inviter : l'admin choisit un membre de l'équipe et une durée, 10 minutes, une heure ou un jour, et l'appli partage un lien cybersas:// à usage unique qui porte la clé du verrou. Signer : la demande arrive avec l'empreinte, l'adresse et le groupe ; l'admin compare puis signe avec son doigt ; si le serveur change un champ entre-temps, rien n'est signé. Renommer : chacun ses appareils, l'admin tous ; le nom affiché ne fait pas partie du certificat. Retirer : un appareil dont on ne veut plus est coupé tout de suite, mais pourrait se réinscrire. Révoquer : pour un appareil volé, la liste de révocation est signée sur le téléphone de l'admin, et aucun appareil ne revient à une liste plus ancienne. L'équipe elle-même : la liste des comptes vit sur le serveur, dans equipe.txt, et l'admin la règle depuis l'appli, écran Équipe, ou en ligne de commande." width="100%">
 
 <img src="docs/schemas/revocation.svg" alt="Révoquer un appareil depuis l'appli. Sur son téléphone fold8-tristan, l'admin touche Révoquer portable-test ; après son empreinte, le téléphone signe la liste de révocation v4 avec la clé du verrou. Le serveur sasd vérifie la signature et que v4 est plus récente que v3, la garde dans revocations.json et la transmet. La maison et laptop-lea retiennent la v4 ; portable-test est coupé. Les appareils n'acceptent jamais une liste plus ancienne." width="100%">
 
-Pour l'instant, l'équipe elle-même se règle en ligne de commande :
+L'équipe elle-même se règle depuis l'appli de l'admin, dans Réglages, Équipe : ajouter un compte Google, changer son groupe, le retirer, chaque fois avec le doigt. Le serveur refuse qu'un admin change son propre accès, ou retire le dernier admin. La ligne de commande fait la même chose, sur le même fichier :
 
 ```bash
 bash scripts/sas.sh membre alice@gmail.com equipe
 bash scripts/sas.sh retirer alice@gmail.com
 ```
 
-Retirer quelqu'un de l'équipe coupe tous ses appareils en cinq secondes au plus.
+Retirer quelqu'un de l'équipe coupe tous ses appareils, et ses services web, en cinq secondes au plus.
 
 <img src="docs/sections/s07.png" alt="07 Essayer le labo" width="100%">
 

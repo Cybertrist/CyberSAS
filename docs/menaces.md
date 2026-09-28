@@ -56,7 +56,7 @@ Depuis que l'admin signe depuis son téléphone, ce téléphone compte autant qu
 
 <img src="schemas/menaces/telephone.png" alt="Si le téléphone de l'admin est volé. Ce qui le protège : le verrou de l'appli, une empreinte à l'ouverture et à nouveau après 30 secondes dehors, compté sur l'horloge du système qu'on ne recule pas ; la clé du verrou, chiffrée par une clé de la puce, qui ne s'ouvre qu'avec une empreinte pour une seule opération et qu'une empreinte ajoutée invalide ; pas de copie, la clé de l'appareil et le coffre sont exclus des sauvegardes et des transferts ; un aperçu vide dans les applis récentes. Ce qu'il faut faire : retirer et révoquer le téléphone depuis un autre appareil d'admin ou depuis l'ordinateur ; changer de verrou si le téléphone était déverrouillé et l'appli ouverte au moment du vol ; garder une copie de la clé du verrou hors ligne." width="100%">
 
-Un voleur qui trouve le téléphone verrouillé n'a rien. S'il le trouve déverrouillé, l'appli lui demande une empreinte ; s'il la trouve ouverte, il peut voir le réseau, créer une invitation, pour un membre déjà dans l'équipe seulement, ou en annuler une ; retirer, signer ou révoquer demandent encore le doigt de l'admin.
+Un voleur qui trouve le téléphone verrouillé n'a rien. S'il le trouve déverrouillé, l'appli lui demande une empreinte ; s'il la trouve ouverte, il peut voir le réseau, créer une invitation, pour un membre déjà dans l'équipe seulement, ou en annuler une ; changer l'équipe, retirer, signer ou révoquer demandent encore le doigt de l'admin.
 
 <a name="ce-qu-il-ne-promet-pas"></a>
 <img src="sections/menaces/s06.png" alt="06 Ce qu'il ne promet pas" width="100%">

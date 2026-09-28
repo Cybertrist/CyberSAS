@@ -4,11 +4,15 @@
 // Les images atterrissent dans test/captures/.
 import 'dart:io';
 
+import 'dart:math';
+
+import 'package:clock/clock.dart';
 import 'package:cybersas/composants.dart';
 import 'package:cybersas/donnees.dart';
 import 'package:cybersas/ecrans/ajout.dart';
 import 'package:cybersas/ecrans/demandes.dart';
 import 'package:cybersas/ecrans/detail.dart';
+import 'package:cybersas/ecrans/equipe.dart';
 import 'package:cybersas/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,15 +50,24 @@ Future<void> _ouvrir(WidgetTester t, Size taille, Reseau r) async {
   await t.runAsync(() => precacheImage(const AssetImage('assets/icon/icon.png'), t.element(find.byType(Scaffold).first)));
 }
 
+/// Chaque capture se prend le 28/09/2026 à 10 h, avec un tirage à graine
+/// fixe : les jours restants et le QR ne changent plus d'une fois sur
+/// l'autre, et une capture qui bouge dit vraiment qu'un écran a changé.
+final _instant = DateTime(2026, 9, 28, 10);
+
+void _capture(String nom, Future<void> Function(WidgetTester) corps) =>
+    testWidgets(nom, (t) => withClock(Clock.fixed(_instant), () => corps(t)));
+
 void main() {
   setUpAll(() async {
+    CodeInvitation.hasard = () => Random(7);
     SharedPreferences.setMockInitialValues({});
     await _polices();
   });
 
   for (final f in _formats.entries) {
     for (final (onglet, nom) in [(0, 'accueil'), (1, 'appareils'), (2, 'reglages')]) {
-      testWidgets('${f.key} $nom', (t) async {
+      _capture('${f.key} $nom', (t) async {
         addTearDown(t.view.reset);
         await _ouvrir(t, f.value, Reseau(inscrit: true));
         if (onglet > 0) await t.tap(find.text(['Accueil', 'Appareils', 'Réglages'][onglet]).last);
@@ -64,7 +77,7 @@ void main() {
     }
   }
 
-  testWidgets('telephone accueil-eteint', (t) async {
+  _capture('telephone accueil-eteint', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
     await _attendre(t, 500);
@@ -74,7 +87,7 @@ void main() {
   });
 
   for (final f in ['telephone', 'fold-deplie-portrait']) {
-    testWidgets('$f connexion', (t) async {
+    _capture('$f connexion', (t) async {
       addTearDown(t.view.reset);
       await _ouvrir(t, _formats[f]!, Reseau());
       await _attendre(t, 600);
@@ -86,9 +99,10 @@ void main() {
     ('detail', const EcranDetail(adresse: '10.77.0.2') as Widget),
     ('ajout', const EcranAjout()),
     ('demandes', const EcranDemandes()),
+    ('equipe', const EcranEquipe()),
   ]) {
     for (final f in ['telephone', 'fold-exterieur']) {
-      testWidgets('$f $nom', (t) async {
+      _capture('$f $nom', (t) async {
         addTearDown(t.view.reset);
         await _ouvrir(t, _formats[f]!, Reseau(inscrit: true));
         final nav = t.state<NavigatorState>(find.byType(Navigator).first);
@@ -99,8 +113,29 @@ void main() {
     }
   }
 
+  // L'équipe : sur le Fold déplié, et ses deux fenêtres (ajouter, la
+  // fiche d'un membre) sur le téléphone.
+  _capture('fold-deplie-paysage equipe', (t) async {
+    addTearDown(t.view.reset);
+    await _ouvrir(t, _formats['fold-deplie-paysage']!, Reseau(inscrit: true));
+    t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranEquipe()));
+    await _attendre(t, 800);
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/fold-deplie-paysage-equipe.png'));
+  });
+  for (final (nom, bouton) in [('equipe-ajout', 'Ajouter un membre'), ('equipe-membre', 'lea.martin@gmail.com')]) {
+    _capture('telephone $nom', (t) async {
+      addTearDown(t.view.reset);
+      await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
+      t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranEquipe()));
+      await _attendre(t, 800);
+      await t.tap(find.text(bouton));
+      await _attendre(t, 800);
+      await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-$nom.png'));
+    });
+  }
+
   // L'interrupteur bloqué pendant que le tunnel s'éteint.
-  testWidgets('telephone accueil-transition', (t) async {
+  _capture('telephone accueil-transition', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
     await _attendre(t, 500);
@@ -110,7 +145,7 @@ void main() {
     await _attendre(t, 2500);
   });
 
-  testWidgets('telephone verrou', (t) async {
+  _capture('telephone verrou', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true)..verrouAppli = true);
     // L'entrée du logo, juste avant la demande d'empreinte (1,5 s) : en
@@ -121,7 +156,7 @@ void main() {
     await _attendre(t, 800);
   });
 
-  testWidgets('telephone renommer', (t) async {
+  _capture('telephone renommer', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
     await t.tap(find.text('Réglages').last);
@@ -132,7 +167,7 @@ void main() {
   });
 
   // Les invitations en cours, ouvertes depuis l'écran d'ajout.
-  testWidgets('telephone invitations', (t) async {
+  _capture('telephone invitations', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
     t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranAjout()));
@@ -143,7 +178,7 @@ void main() {
   });
 
   // Les deux demandes signées : laptop-lea et tab-tristan dans la liste.
-  testWidgets('telephone appareils-signes', (t) async {
+  _capture('telephone appareils-signes', (t) async {
     addTearDown(t.view.reset);
     final r = Reseau(inscrit: true);
     for (final d in [...r.demandes]) {
@@ -155,7 +190,7 @@ void main() {
     await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-appareils-signes.png'));
   });
 
-  testWidgets('telephone appareils-coupe', (t) async {
+  _capture('telephone appareils-coupe', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true)..connecte = false);
     await t.tap(find.text('Appareils').last);
@@ -164,7 +199,7 @@ void main() {
   });
 
   // La carte à mi-coupure : réseau déjà gris, fil du Fold en train de se vider.
-  testWidgets('telephone appareils-coupure', (t) async {
+  _capture('telephone appareils-coupure', (t) async {
     addTearDown(t.view.reset);
     final r = Reseau(inscrit: true);
     await _ouvrir(t, _formats['telephone']!, r);
@@ -177,7 +212,7 @@ void main() {
   });
 
   // Paysage : un appareil touché, la liste glisse à gauche, le détail à droite.
-  testWidgets('fold-deplie-paysage appareils-detail', (t) async {
+  _capture('fold-deplie-paysage appareils-detail', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['fold-deplie-paysage']!, Reseau(inscrit: true));
     await t.tap(find.text('Appareils').last);
@@ -188,7 +223,7 @@ void main() {
   });
 
   // Au milieu du décalage : la carte part à gauche, la liste arrive.
-  testWidgets('fold-deplie-paysage appareils-glisse', (t) async {
+  _capture('fold-deplie-paysage appareils-glisse', (t) async {
     addTearDown(t.view.reset);
     await _ouvrir(t, _formats['fold-deplie-paysage']!, Reseau(inscrit: true));
     await t.tap(find.text('Appareils').last);

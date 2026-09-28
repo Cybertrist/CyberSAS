@@ -34,6 +34,8 @@ func (s *Serveur) Routes() http.Handler {
 	mux.HandleFunc("POST "+protocole.CheminRevocations, s.revocations)
 	mux.HandleFunc("GET "+protocole.CheminInvitations, s.invitations)
 	mux.HandleFunc("POST "+protocole.CheminAnnulation, s.annulation)
+	mux.HandleFunc("GET "+protocole.CheminEquipe, s.listeEquipe)
+	mux.HandleFunc("POST "+protocole.CheminEquipe, s.membre)
 	mux.HandleFunc("GET "+protocole.CheminServeur, func(w http.ResponseWriter, _ *http.Request) {
 		repondre(w, http.StatusOK, s.infoServeur())
 	})

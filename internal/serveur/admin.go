@@ -188,7 +188,8 @@ func (s *Serveur) retrait(w http.ResponseWriter, r *http.Request) {
 
 // invitation : une clé d'inscription pour un membre de l'équipe, comme
 // « sas.sh invitation ». On n'invite que quelqu'un qui est déjà dans
-// equipe.txt : l'appli ne change pas l'équipe.
+// equipe.txt : l'admin l'y ajoute d'abord (écran Équipe de l'appli, ou
+// « sas.sh membre »), voir equipe.go.
 func (s *Serveur) invitation(w http.ResponseWriter, r *http.Request) {
 	moi, ok := s.admin(w, r)
 	if !ok {
@@ -346,13 +347,18 @@ func (s *Serveur) revocations(w http.ResponseWriter, r *http.Request) {
 // synchronisé, puis renommé : après une coupure de courant, on retrouve
 // l'ancienne liste ou la nouvelle, jamais un fichier vide ou coupé.
 func ecrireAtomique(chemin string, b []byte) error {
+	return ecrireAtomiqueMode(chemin, b, 0o600)
+}
+
+// ecrireAtomiqueMode : la même chose, avec ces droits-là.
+func ecrireAtomiqueMode(chemin string, b []byte, mode os.FileMode) error {
 	f, err := os.CreateTemp(filepath.Dir(chemin), filepath.Base(chemin)+".*.tmp")
 	if err != nil {
 		return err
 	}
 	tmp := f.Name()
 	defer os.Remove(tmp) // sans effet une fois renommé
-	if err := f.Chmod(0o600); err != nil {
+	if err := f.Chmod(mode); err != nil {
 		f.Close()
 		return err
 	}

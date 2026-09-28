@@ -37,6 +37,9 @@ const (
 	// CheminAnnulation : en annuler une avant qu'elle ne serve.
 	CheminInvitations = "/api/v1/invitations"
 	CheminAnnulation  = "/api/v1/invitations/annulation"
+	// CheminEquipe : la liste de l'équipe (GET), et un membre ajouté,
+	// changé de groupe ou retiré (POST). Admins seulement.
+	CheminEquipe = "/api/v1/equipe"
 )
 
 // DemandeLibelle : le nouveau nom affiché. ClePublique désigne un autre
@@ -172,6 +175,21 @@ type Invitation struct {
 // DemandeAnnulation : l'invitation à annuler.
 type DemandeAnnulation struct {
 	ID string `json:"id"`
+}
+
+// Membre : une ligne de equipe.txt. Moi : c'est le compte qui demande.
+type Membre struct {
+	Adresse string `json:"adresse"`
+	Groupe  string `json:"groupe"`
+	Moi     bool   `json:"moi,omitempty"`
+}
+
+// DemandeMembre : la personne entre dans ce groupe (admins ou equipe), ou
+// change de groupe. Groupe vide : elle sort de l'équipe, et ses appareils
+// avec elle.
+type DemandeMembre struct {
+	Adresse string `json:"adresse"`
+	Groupe  string `json:"groupe"`
 }
 
 type Erreur struct {

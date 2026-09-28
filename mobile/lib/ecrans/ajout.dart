@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -37,7 +38,7 @@ class _EcranAjoutState extends State<EcranAjout> {
   }
 
   Duration get _reste {
-    final d = _invitation.expire.difference(DateTime.now());
+    final d = _invitation.expire.difference(clock.now());
     return d.isNegative ? Duration.zero : d;
   }
 
@@ -264,7 +265,7 @@ class _AjoutReelState extends State<_AjoutReel> {
   static const _durees = [(10, '10 min'), (60, '1 h'), (24 * 60, '24 h')];
   int _minutes = 10;
   String _lien = '';
-  DateTime _expire = DateTime.now();
+  DateTime _expire = clock.now();
   String? _erreur;
   bool _enCours = false;
   Timer? _horloge;
@@ -300,7 +301,7 @@ class _AjoutReelState extends State<_AjoutReel> {
       _enCours = false;
       _erreur = e;
       _lien = lien;
-      _expire = DateTime.now().add(Duration(minutes: _minutes));
+      _expire = clock.now().add(Duration(minutes: _minutes));
     });
     _horloge?.cancel();
     if (e == null) _horloge = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
@@ -335,7 +336,7 @@ class _AjoutReelState extends State<_AjoutReel> {
   @override
   Widget build(BuildContext context) {
     final r = EtatReseau.of(context);
-    final reste = _expire.difference(DateTime.now());
+    final reste = _expire.difference(clock.now());
     final expiree = _lien.isNotEmpty && reste.isNegative;
     final h = reste.inHours;
     final mm = (reste.inMinutes % 60).toString().padLeft(2, '0');

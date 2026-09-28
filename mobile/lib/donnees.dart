@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -156,7 +157,7 @@ class Appareil {
   EtatCertificat get etatCertificat {
     if (signe) return EtatCertificat.signe;
     if (raison.contains('révoqué')) return EtatCertificat.revoque;
-    if (certificat.finConnue && certificat.fin.isBefore(DateTime.now())) return EtatCertificat.expire;
+    if (certificat.finConnue && certificat.fin.isBefore(clock.now())) return EtatCertificat.expire;
     return EtatCertificat.attente;
   }
 
@@ -233,8 +234,8 @@ class Appareil {
       suffixeReseau: email.isEmpty || serveur || etiquette.isNotEmpty ? '' : '-${nomPropre(email.split('@').first)}',
       certificat: Certificat(
         // Le verrou signe pour 90 jours par défaut.
-        debut: (expire ?? DateTime.now()).subtract(const Duration(days: 90)),
-        fin: expire ?? DateTime.now(),
+        debut: (expire ?? clock.now()).subtract(const Duration(days: 90)),
+        fin: expire ?? clock.now(),
         finConnue: expire != null,
         empreinte: (j['empreinte'] as String? ?? '').split('-'),
       ),
@@ -315,7 +316,7 @@ class Demande {
 const operationAnnulee = '';
 
 class CodeInvitation {
-  CodeInvitation(this.serveur) : code = _code(), expire = DateTime.now().add(const Duration(minutes: 10));
+  CodeInvitation(this.serveur) : code = _code(), expire = clock.now().add(const Duration(minutes: 10));
 
   final String serveur;
   final String code;
@@ -323,10 +324,14 @@ class CodeInvitation {
 
   String get charge => 'cybersas://invitation?serveur=$serveur&code=$code';
 
+  /// Le tirage des codes. Les captures le remplacent par un tirage à
+  /// graine fixe, pour que le QR soit le même d'une fois sur l'autre.
+  static Random Function() hasard = Random.secure;
+
   // Sans 0/O ni 1/I : le code se recopie à la main sans hésiter.
   static String _code() {
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final r = Random.secure();
+    final r = hasard();
     String bloc() => List.generate(4, (_) => alphabet[r.nextInt(alphabet.length)]).join();
     return 'SAS-${bloc()}-${bloc()}';
   }
@@ -352,11 +357,28 @@ class InvitationEnCours {
 
   /// « 42 min », « 3 h 05 » ; « moins d'une minute » à la fin.
   String get reste {
-    final d = expire.difference(DateTime.now());
+    final d = expire.difference(clock.now());
     if (d.inMinutes < 1) return "moins d'une minute";
     if (d.inHours == 0) return '${d.inMinutes} min';
     return '${d.inHours} h ${(d.inMinutes % 60).toString().padLeft(2, '0')}';
   }
+}
+
+/// Une personne de l'équipe : un compte Google et son groupe, « admins »
+/// ou « equipe », comme une ligne de equipe.txt sur le serveur.
+class Membre {
+  const Membre({required this.adresse, required this.groupe, this.moi = false});
+  final String adresse;
+  final String groupe;
+
+  /// C'est le compte de ce téléphone : l'admin ne change pas son propre
+  /// accès, un autre admin doit le faire.
+  final bool moi;
+
+  bool get admin => groupe == 'admins';
+
+  /// Même règle que « sas.sh membre » et le serveur.
+  static bool adresseValide(String a) => a.length <= 254 && RegExp(r'^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]+$').hasMatch(a);
 }
 
 /// L'état de l'appli, partagé par tous les écrans.
@@ -409,13 +431,13 @@ class Reseau extends ChangeNotifier {
 
   /// Tunnel ouvert, mais toujours pas de serveur après le délai.
   bool get tunnelEnPanne =>
-      connecte && !serveurJoint && !enTransition && DateTime.now().difference(debutConnexion) > delaiConnexion;
+      connecte && !serveurJoint && !enTransition && clock.now().difference(debutConnexion) > delaiConnexion;
 
   /// Tunnel coupé, l'API n'a pas répondu à la dernière question : ce que
   /// l'appli sait du réseau (et de son propre certificat) peut être périmé.
   bool serveurInjoignable = false;
 
-  DateTime debutConnexion = DateTime.now().subtract(const Duration(hours: 2, minutes: 14));
+  DateTime debutConnexion = clock.now().subtract(const Duration(hours: 2, minutes: 14));
   String serveur = 'vpn.exemple.fr';
   String cleVerrou = '';
   String plage = '10.77.0.0/24';
@@ -546,7 +568,7 @@ class Reseau extends ChangeNotifier {
       return;
     }
     connecte = v;
-    if (v) debutConnexion = DateTime.now();
+    if (v) debutConnexion = clock.now();
     _attendreAnimation();
     notifyListeners();
   }
@@ -586,7 +608,7 @@ class Reseau extends ChangeNotifier {
         notifyListeners();
         return;
       }
-      _noterDebut(DateTime.now());
+      _noterDebut(clock.now());
       serveurJoint = false;
       serveurInjoignable = false;
     } else {
@@ -635,7 +657,7 @@ class Reseau extends ChangeNotifier {
     _adopterInscription(i);
     final p = await SharedPreferences.getInstance();
     final debut = p.getInt(_cleDebut);
-    debutConnexion = debut == null ? DateTime.now() : DateTime.fromMillisecondsSinceEpoch(debut);
+    debutConnexion = debut == null ? clock.now() : DateTime.fromMillisecondsSinceEpoch(debut);
     // Hors ligne au démarrage, l'appli se souvient qu'elle est admin.
     admin = p.getBool(_cleAdmin) ?? admin;
     cleVerrouPresente = await Moteur.verrouPresent();
@@ -663,7 +685,7 @@ class Reseau extends ChangeNotifier {
       moi: true,
       enLigne: false,
       signe: false,
-      certificat: Certificat(debut: DateTime.now(), fin: DateTime.now(), finConnue: false, empreinte: (i['empreinte'] as String? ?? '').split('-')),
+      certificat: Certificat(debut: clock.now(), fin: clock.now(), finConnue: false, empreinte: (i['empreinte'] as String? ?? '').split('-')),
     );
   }
 
@@ -697,7 +719,7 @@ class Reseau extends ChangeNotifier {
     // Un tunnel qu'on a vu coupé, puis ouvert sans nous (service relancé
     // par Android) : on ne sait pas depuis quand, on part de maintenant.
     // Au premier relevé, on garde le début enregistré par charger().
-    if (enMarche && _enMarcheVu == false && !enTransition && !_demarrage) _noterDebut(DateTime.now());
+    if (enMarche && _enMarcheVu == false && !enTransition && !_demarrage) _noterDebut(clock.now());
     _enMarcheVu = enMarche;
     // Pendant qu'on change d'état, l'interrupteur a la main.
     if (!enTransition) connecte = enMarche;
@@ -852,7 +874,7 @@ class Reseau extends ChangeNotifier {
       }
       adresse = '10.77.0.$n';
     }
-    final maintenant = DateTime.now();
+    final maintenant = clock.now();
     appareils.add(Appareil(
       nom: d.nom,
       adresse: adresse,
@@ -912,8 +934,8 @@ class Reseau extends ChangeNotifier {
   /// Les invitations en cours (admin). Dans la démo, deux inventées.
   late final invitations = <InvitationEnCours>[
     if (!reel) ...[
-      InvitationEnCours(id: 'a1', pour: 'lea.martin@gmail.com', createur: 'tristan@exemple.fr', expire: DateTime.now().add(const Duration(minutes: 42))),
-      InvitationEnCours(id: 'b2', pour: 'nas', machine: true, expire: DateTime.now().add(const Duration(hours: 18, minutes: 5))),
+      InvitationEnCours(id: 'a1', pour: 'lea.martin@gmail.com', createur: 'tristan@exemple.fr', expire: clock.now().add(const Duration(minutes: 42))),
+      InvitationEnCours(id: 'b2', pour: 'nas', machine: true, expire: clock.now().add(const Duration(hours: 18, minutes: 5))),
     ],
   ];
 
@@ -943,6 +965,71 @@ class Reseau extends ChangeNotifier {
       }
     }
     invitations.removeWhere((x) => x.id == i.id);
+    notifyListeners();
+    return null;
+  }
+
+  // ─── L'équipe, pour l'admin ───
+
+  /// L'équipe telle que le serveur la tient (equipe.txt). Dans la démo,
+  /// une équipe inventée.
+  final membres = <Membre>[
+    const Membre(adresse: 'tristan@gmail.com', groupe: 'admins', moi: true),
+    const Membre(adresse: 'ana.roux@gmail.com', groupe: 'admins'),
+    const Membre(adresse: 'lea.martin@gmail.com', groupe: 'equipe'),
+    const Membre(adresse: 'hugo.petit@gmail.com', groupe: 'equipe'),
+  ];
+
+  /// Relit l'équipe sur le serveur. Rend l'erreur à afficher, ou null.
+  Future<String?> lireEquipe() async {
+    if (!reel) return null;
+    try {
+      _adopterEquipe(await Moteur.equipe());
+    } on ErreurMoteur catch (e) {
+      return e.message;
+    }
+    return null;
+  }
+
+  void _adopterEquipe(List<Map<String, dynamic>> liste) {
+    membres
+      ..clear()
+      ..addAll([
+        for (final m in liste)
+          Membre(adresse: m['adresse'] as String? ?? '?', groupe: m['groupe'] as String? ?? '', moi: m['moi'] == true),
+      ]);
+    notifyListeners();
+  }
+
+  /// Met [adresse] dans [groupe] (« admins » ou « equipe ») : elle entre
+  /// dans l'équipe, ou change de groupe. [groupe] vide : elle en sort, et
+  /// ses appareils sont coupés. Le serveur refuse qu'on change son propre
+  /// accès ou qu'on retire le dernier admin ; la démo fait de même. Rend
+  /// l'erreur à afficher, ou null.
+  Future<String?> changerMembre(String adresse, String groupe) async {
+    final a = adresse.trim().toLowerCase();
+    if (!Membre.adresseValide(a)) return 'Adresse invalide';
+    if (reel) {
+      try {
+        _adopterEquipe(await Moteur.changerMembre(a, groupe));
+      } on ErreurMoteur catch (e) {
+        return e.message;
+      }
+      return null;
+    }
+    final i = membres.indexWhere((m) => m.adresse == a);
+    if (i >= 0 && membres[i].moi) return "On ne change pas son propre accès : un autre admin doit le faire";
+    if (i >= 0 && membres[i].admin && groupe != 'admins' && membres.where((m) => m.admin).length <= 1) {
+      return "C'est le dernier admin : nommer d'abord un autre admin";
+    }
+    if (groupe.isEmpty) {
+      if (i < 0) return "$a n'est pas dans l'équipe";
+      membres.removeAt(i);
+    } else if (i >= 0) {
+      membres[i] = Membre(adresse: a, groupe: groupe);
+    } else {
+      membres.add(Membre(adresse: a, groupe: groupe));
+    }
     notifyListeners();
     return null;
   }

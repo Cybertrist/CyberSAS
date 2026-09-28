@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -321,7 +322,7 @@ class _CarteCertificat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = a.certificat;
-    final maintenant = DateTime.now();
+    final maintenant = clock.now();
     final date = '${c.fin.day.toString().padLeft(2, '0')}/${c.fin.month.toString().padLeft(2, '0')}/${c.fin.year}';
     final jours = c.joursRestants(maintenant);
     final r = EtatReseau.of(context);

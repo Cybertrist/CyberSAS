@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 
 import '../composants.dart';
@@ -194,7 +195,7 @@ class _CarteEtat extends StatelessWidget {
       // Tunnel ouvert, mais pas (encore) de session avec le serveur.
       (true, false) when !r.serveurJoint =>
         ('Connexion…', r.tunnelEnPanne || erreur.isNotEmpty ? 'serveur injoignable' : 'recherche du serveur'),
-      (true, false) => ('Connecté', 'depuis ${duree(DateTime.now().difference(r.debutConnexion))}'),
+      (true, false) => ('Connecté', 'depuis ${duree(clock.now().difference(r.debutConnexion))}'),
       (false, false) => ('Déconnecté', erreur.isNotEmpty ? erreur : 'tunnel coupé'),
     };
     return AnimatedSwitcher(
@@ -304,8 +305,8 @@ class _CarteAppareil extends StatelessWidget {
             Expanded(
               child: switch (moi.etatCertificat) {
                 // Signé : on prévient deux semaines avant l'expiration.
-                EtatCertificat.signe when moi.certificat.finConnue && moi.certificat.joursRestants(DateTime.now()) <= 14 =>
-                  garantie(Ico.bouclier, Couleurs.rouge, 'Expire dans ${moi.certificat.joursRestants(DateTime.now())} j', 'à renouveler'),
+                EtatCertificat.signe when moi.certificat.finConnue && moi.certificat.joursRestants(clock.now()) <= 14 =>
+                  garantie(Ico.bouclier, Couleurs.rouge, 'Expire dans ${moi.certificat.joursRestants(clock.now())} j', 'à renouveler'),
                 EtatCertificat.signe => garantie(Ico.bouclier, Couleurs.cyan, 'Verrou vérifié', "Signé par l'admin"),
                 EtatCertificat.revoque => garantie(Ico.bouclier, Couleurs.rouge, 'Appareil révoqué', "par l'admin"),
                 EtatCertificat.expire => garantie(Ico.bouclier, Couleurs.rouge, 'Certificat expiré', 'à renouveler'),
@@ -330,7 +331,7 @@ class _Infos extends StatelessWidget {
   Widget build(BuildContext context) {
     final lignes = [
       if (complet)
-        (Ico.activite, Couleurs.cyan, 'Connecté depuis', r.enService ? duree(DateTime.now().difference(r.debutConnexion)) : 'pas connecté'),
+        (Ico.activite, Couleurs.cyan, 'Connecté depuis', r.enService ? duree(clock.now().difference(r.debutConnexion)) : 'pas connecté'),
       if (complet) (Ico.appareils, Couleurs.cyan, 'Appareils joignables', r.enService ? '${r.enLigne} sur ${r.appareils.length}' : '0 sur ${r.appareils.length}'),
       (Ico.globe, Couleurs.cyan, 'Réseau', r.plage),
       (Ico.cadenas, Couleurs.cyan, 'Protocole', r.protocole),

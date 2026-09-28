@@ -115,9 +115,17 @@ abstract final class Moteur {
   /// Range la clé du verrou dans le coffre. Android vérifie d'abord que
   /// c'est bien celle du verrou de ce réseau, puis ouvre l'invite
   /// d'empreinte ([titre]) : c'est elle qui autorise le rangement. Rend
-  /// l'empreinte du verrou.
-  static Future<String> rangerVerrou(String graine, {required String titre}) async =>
-      await _appel<String>('coffreRanger', {'graine': graine, 'titre': titre}) ?? '';
+  /// l'empreinte du verrou. [graine] peut aussi être une sauvegarde de
+  /// secours : le moteur l'ouvre avec [phrase], et la clé qui en sort va
+  /// droit au coffre.
+  static Future<String> rangerVerrou(String graine, {required String titre, String phrase = ''}) async =>
+      await _appel<String>('coffreRanger', {'graine': graine, 'titre': titre, 'phrase': phrase}) ?? '';
+
+  /// La sauvegarde de secours de la clé du verrou, chiffrée par [phrase]
+  /// (pont.SauverVerrou). L'invite d'empreinte ([titre], [detail]) ouvre le
+  /// coffre pour cette seule opération ; seul le texte chiffré revient.
+  static Future<String> sauverVerrou(String phrase, {required String titre, required String detail}) async =>
+      await _appel<String>('secours', {'phrase': phrase, 'titre': titre, 'detail': detail}) ?? '';
 
   static Future<void> effacerVerrou() => _appel<void>('coffreEffacer');
 

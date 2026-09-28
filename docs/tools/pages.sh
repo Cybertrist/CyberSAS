@@ -59,7 +59,7 @@ banniere_doc "$DOCS/banniere-verrou.png" "CYBERSAS · DOCUMENTATION" "Le verrou"
   "La clé qui signe qui entre, où elle vit, et comment s'en servir pas à pas." \
   "Ed25519" "Keystore" "StrongBox" "empreinte"
 bandeaux "$DOCS/sections/verrou" "La règle d'or" "La chaîne de confiance" "Le coffre du téléphone" "Créer le verrou" \
-  "Signer un appareil" "Signer la politique" "Bannir un appareil" "Si la clé est perdue ou volée"
+  "Signer un appareil" "Signer la politique" "Bannir un appareil" "Si la clé est perdue ou volée" "La sauvegarde de secours"
 
 grille "$S/verrou/deux-places.png" 2 \
   "smartphone|Sur le téléphone de l'admin|La clé est rangée chiffrée par une clé AES du Keystore, dans la puce StrongBox. Une empreinte l'ouvre pour une seule signature. C'est là qu'on signe au quotidien : demandes, révocations." \
@@ -68,6 +68,13 @@ grille "$S/verrou/deux-places.png" 2 \
 grille "$S/verrou/perte.png" 2 \
   "search_off|Perdue|Il faut en créer une nouvelle, et réinscrire tous les appareils avec <code>--oublier</code> : ils refusent tout changement de verrou. Le téléphone seul, sans copie, gèle toute signature." \
   "gpp_bad|Volée|Même chose, et vite : le voleur peut signer ce qu'il veut tant que les appareils font confiance à l'ancienne. Sur le téléphone, il lui faudrait d'abord le doigt de l'admin."
+
+octets "$S/verrou/secours.png" \
+  "Sauvegarde|127 octets en base64|version:1:g,mémoire:4:b,passes:1:b,voies:1:b,sel:16:g,nonce:24:g,clé publique:32:v,graine chiffrée:32:c,tag:16:c"
+
+grille "$S/verrou/secours-limites.png" 2 \
+  "verified_user|Ce qu'elle protège|Le téléphone perdu, cassé ou remis à zéro : la sauvegarde et sa phrase redonnent la clé, sans réinscrire personne. Modifiée d'un seul octet, elle ne s'ouvre plus." \
+  "warning|Ce qu'elle ne protège pas|Une phrase faible : qui vole le texte essaie des phrases chez lui, sans limite, et Argon2id ne fait que le ralentir. Une phrase oubliée : rien ne la retrouve. Le texte et sa phrase ensemble valent la clé."
 
 # ========================================================== les menaces
 banniere_doc "$DOCS/banniere-menaces.png" "CYBERSAS · DOCUMENTATION" "Le modèle de menace" \

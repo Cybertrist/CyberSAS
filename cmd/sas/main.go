@@ -12,12 +12,15 @@
 //	sas verrou signer --fichier F --cle K[,K...]    signe ces appareils-là, et eux seuls
 //	sas verrou politique --fichier F < politique.json
 //	sas verrou revoquer --fichier F --cle K < revocations.json
+//	sas verrou secours --fichier F > secours.txt     sauvegarde de secours, chiffrée par une phrase
+//	sas verrou restaurer --fichier F --secours S     vérifie la sauvegarde S, ou recrée F à partir d'elle
 //
 // La clé privée de l'appareil est générée ici et reste dans /var/lib/sas,
 // lisible par root seul. Le serveur n'en voit que la moitié publique.
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/ed25519"
@@ -45,6 +48,7 @@ import (
 	"github.com/Cybertrist/CyberSAS/internal/protocole"
 	"github.com/Cybertrist/CyberSAS/internal/tun"
 	"github.com/Cybertrist/CyberSAS/internal/verrou"
+	"golang.org/x/sys/unix"
 )
 
 // stockage : l'état de cet appareil, dans /var/lib/sas, lisible par root
@@ -237,12 +241,13 @@ func lireVerrou(fichier string) ed25519.PrivateKey {
 
 func cmdVerrou(args []string) {
 	if len(args) == 0 {
-		meurt("usage : sas verrou creer|signer|politique|revoquer --fichier F")
+		meurt("usage : sas verrou creer|signer|politique|revoquer|secours|restaurer --fichier F")
 	}
 	f := flag.NewFlagSet("verrou", flag.ExitOnError)
 	fichier := f.String("fichier", "", "clé privée du verrou")
 	cles := f.String("cle", "", "clés publiques à signer ou à révoquer, séparées par des virgules")
 	duree := f.Duration("duree", 90*24*time.Hour, "durée de validité des certificats")
+	secours := f.String("secours", "", "la sauvegarde de secours à vérifier ou à restaurer")
 	f.Parse(args[1:])
 	if *fichier == "" {
 		meurt("il faut --fichier")
@@ -326,9 +331,114 @@ func cmdVerrou(args []string) {
 		fmt.Fprintf(os.Stderr, "liste version %d, %d clés\n", suite.Version, len(suite.Cles))
 		json.NewEncoder(os.Stdout).Encode(suite)
 
+	case "secours":
+		sauverVerrou(lireVerrou(*fichier))
+
+	case "restaurer":
+		if *secours == "" {
+			meurt("il faut --secours, la sauvegarde à lire")
+		}
+		restaurerVerrou(*fichier, *secours)
+
 	default:
-		meurt("usage : sas verrou creer|signer|politique|revoquer --fichier F")
+		meurt("usage : sas verrou creer|signer|politique|revoquer|secours|restaurer --fichier F")
 	}
+}
+
+// --- la sauvegarde de secours du verrou --------------------------------------
+
+// lirePhrase : la phrase de passe, sans l'afficher. Au terminal, elle est
+// demandée (deux fois si confirmer) sur stderr, l'écho coupé ; sinon, par
+// exemple depuis sas.sh qui l'a déjà demandée, c'est la première ligne de
+// l'entrée. Jamais en argument : elle finirait dans l'historique et dans
+// la liste des processus.
+func lirePhrase(confirmer bool) string {
+	entree := bufio.NewReader(os.Stdin)
+	ligne := func() string {
+		l, err := entree.ReadString('\n')
+		if err != nil && l == "" {
+			meurt("pas de phrase de passe sur l'entrée")
+		}
+		return strings.TrimRight(l, "\r\n")
+	}
+	fd := int(os.Stdin.Fd()) // #nosec G115 -- un descripteur tient dans un int
+	etat, err := unix.IoctlGetTermios(fd, unix.TCGETS)
+	if err != nil {
+		return ligne()
+	}
+	muet := *etat
+	muet.Lflag &^= unix.ECHO
+	muet.Lflag |= unix.ICANON | unix.ISIG
+	if err := unix.IoctlSetTermios(fd, unix.TCSETS, &muet); err != nil {
+		meurt("terminal : %v", err)
+	}
+	defer unix.IoctlSetTermios(fd, unix.TCSETS, etat)
+	demande := func(invite string) string {
+		fmt.Fprint(os.Stderr, invite)
+		p := ligne()
+		fmt.Fprintln(os.Stderr)
+		return p
+	}
+	p := demande("phrase de passe : ")
+	if confirmer && demande("encore une fois : ") != p {
+		unix.IoctlSetTermios(fd, unix.TCSETS, etat)
+		meurt("les deux phrases diffèrent")
+	}
+	return p
+}
+
+// sauverVerrou écrit sur la sortie la sauvegarde de secours de la clé du
+// verrou, chiffrée par une phrase de passe.
+func sauverVerrou(prive ed25519.PrivateKey) {
+	phrase := lirePhrase(true)
+	if err := verrou.VerifierPhrase(phrase); err != nil {
+		meurt("%v", err)
+	}
+	s, err := verrou.Secours(prive, phrase)
+	if err != nil {
+		meurt("%v", err)
+	}
+	fmt.Println(s)
+	fmt.Fprintf(os.Stderr, "sauvegarde de secours du verrou %s. À ranger hors de cette machine ; sans la phrase, elle ne sert à rien.\n",
+		verrou.Empreinte(prive.Public().(ed25519.PublicKey)))
+}
+
+// restaurerVerrou ouvre la sauvegarde avec sa phrase. Si fichier existe,
+// on vérifie seulement qu'elle redonne la même clé : c'est l'essai à faire
+// juste après l'avoir rangée. Sinon, fichier est recréé, sans jamais
+// remplacer une clé, et la clé publique est affichée comme par « creer ».
+func restaurerVerrou(fichier, secours string) {
+	texte, err := os.ReadFile(secours)
+	if err != nil {
+		meurt("%v", err)
+	}
+	annoncee, err := verrou.PubliqueSecours(string(texte))
+	if err != nil {
+		meurt("%v", err)
+	}
+	fmt.Fprintf(os.Stderr, "sauvegarde du verrou %s\n", verrou.Empreinte(annoncee))
+	prive, err := verrou.OuvrirSecours(string(texte), lirePhrase(false))
+	if err != nil {
+		meurt("%v", err)
+	}
+	pub := prive.Public().(ed25519.PublicKey)
+	if _, err := os.Stat(fichier); err == nil {
+		if !lireVerrou(fichier).Equal(prive) {
+			meurt("la sauvegarde s'ouvre, mais ce n'est pas la clé de %s", fichier)
+		}
+		fmt.Fprintf(os.Stderr, "sauvegarde valide : elle redonne la clé de %s\n", fichier)
+		return
+	}
+	sortie, err := os.OpenFile(fichier, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		meurt("%v (on ne remplace pas une clé de verrou)", err)
+	}
+	fmt.Fprintln(sortie, base64.StdEncoding.EncodeToString(prive.Seed()))
+	if err := sortie.Close(); err != nil {
+		meurt("%v", err)
+	}
+	fmt.Println(base64.StdEncoding.EncodeToString(pub))
+	fmt.Fprintf(os.Stderr, "verrou restauré dans %s, empreinte %s\n", fichier, verrou.Empreinte(pub))
 }
 
 // signer : l'admin désigne les clés à signer, qu'il a lues sur les

@@ -13,6 +13,7 @@ import 'package:cybersas/ecrans/ajout.dart';
 import 'package:cybersas/ecrans/demandes.dart';
 import 'package:cybersas/ecrans/detail.dart';
 import 'package:cybersas/ecrans/equipe.dart';
+import 'package:cybersas/ecrans/reglages.dart';
 import 'package:cybersas/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -157,6 +158,52 @@ void main() {
       await t.ensureVisible(find.textContaining('invitations en cours'));
       await t.tap(find.textContaining('invitations en cours'));
       await _attendre(t, 800);
+      await _cibles(t);
+    });
+
+    // La sauvegarde de secours : la phrase, le texte prêt, et une
+    // sauvegarde collée là où l'on range la clé.
+    Future<void> phrase(WidgetTester t) async {
+      await _ouvrir(t, _formats['telephone']!, e, Reseau(inscrit: true));
+      await _attendre(t, 400);
+      await t.tap(find.text('Réglages').last);
+      await _attendre(t, 500);
+      await t.scrollUntilVisible(find.text('Sauvegarde de secours'), 200,
+          scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first);
+      // Sous la barre du bas : on la remonte en haut de l'écran.
+      await t.ensureVisible(find.text('Sauvegarde de secours'));
+      await _attendre(t, 400);
+      await t.tap(find.text('Sauvegarde de secours'));
+      await _attendre(t, 800);
+      await t.enterText(find.byType(TextField).at(0), phraseDemo);
+      await t.enterText(find.byType(TextField).at(1), phraseDemo);
+      await _attendre(t, 400);
+    }
+
+    testWidgets('telephone x$e secours-phrase', (t) async {
+      await phrase(t);
+      await _cibles(t);
+    });
+
+    testWidgets('telephone x$e secours-pret', (t) async {
+      await phrase(t);
+      await t.ensureVisible(find.text('Chiffrer'));
+      await t.tap(find.text('Chiffrer'));
+      await _attendre(t, 800);
+      expect(find.text('Sauvegarde prête'), findsOneWidget);
+      await _cibles(t);
+    });
+
+    testWidgets('telephone x$e secours-coller', (t) async {
+      await _ouvrir(t, _formats['telephone']!, e, Reseau(inscrit: true));
+      await _attendre(t, 400);
+      await t.tap(find.text('Réglages').last);
+      await _attendre(t, 500);
+      rangerCleVerrou(t.element(find.byType(EcranReglages)));
+      await _attendre(t, 800);
+      await t.enterText(find.byType(TextField).first, secoursDemo);
+      await _attendre(t, 400);
+      expect(find.textContaining('Klmd-fqOO-8Kzi'), findsOneWidget);
       await _cibles(t);
     });
 

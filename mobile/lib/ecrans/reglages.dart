@@ -11,6 +11,7 @@ import '../theme.dart';
 import 'appareils.dart';
 import 'detail.dart';
 import 'equipe.dart';
+import 'secours.dart';
 
 /// Le compte, cet appareil, la sécurité de l'appli, le réseau. Pas de
 /// « VPN toujours actif » ni de démarrage automatique : le tunnel s'allume
@@ -163,22 +164,28 @@ class _Securite extends StatelessWidget {
   /// (elle doit être celle du verrou de ce réseau), puis rangée dans le
   /// coffre par l'invite d'empreinte d'Android. Quelle que soit l'issue
   /// (rangée, fenêtre fermée, empreinte ratée), le presse-papiers est vidé
-  /// s'il contient encore la clé.
+  /// s'il contient encore la clé. Une sauvegarde de secours se colle au
+  /// même endroit : la fenêtre demande alors sa phrase.
   Future<void> _importerVerrou(BuildContext context) async {
     final messager = ScaffoldMessenger.of(context);
     final champ = TextEditingController();
+    final phrase = TextEditingController();
     String? collee;
     String? saisie;
     try {
-      saisie = await _demanderVerrou(context, champ, (texte) => collee = texte);
-      if (saisie == null || saisie.isEmpty) return;
-      final e = await r.importerVerrou(saisie);
+      final reponse = await _demanderVerrou(context, champ, phrase, (texte) => collee = texte);
+      saisie = reponse?.texte;
+      if (reponse == null || reponse.texte.isEmpty) return;
+      final e = await r.importerVerrou(reponse.texte, phrase: reponse.phrase);
       // Invite fermée : on revient, sans rien dire.
       if (e == operationAnnulee) return;
       messager.showSnackBar(SnackBar(content: Text(e ?? 'Clé du verrou rangée : ce téléphone peut signer.')));
     } finally {
       final candidats = {collee, saisie, champ.text.trim()}.whereType<String>().where((s) => s.isNotEmpty).toSet();
-      Future<void>.delayed(const Duration(milliseconds: 400), champ.dispose);
+      Future<void>.delayed(const Duration(milliseconds: 400), () {
+        champ.dispose();
+        phrase.dispose();
+      });
       await _oublierPressePapiers(candidats);
     }
   }
@@ -196,73 +203,97 @@ class _Securite extends StatelessWidget {
     }
   }
 
-  /// La fenêtre où l'admin colle la clé du verrou. [colle] reçoit ce que le
-  /// bouton « Coller » a lu.
-  Future<String?> _demanderVerrou(BuildContext context, TextEditingController champ, void Function(String) colle) => showDialog<String>(
-      context: context,
-      barrierColor: const Color(0xA8020407),
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Bordee(
-            bordure: Bords.reflet,
-            fond: const Color(0xFF0A1119),
-            rayon: 24,
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Text('Clé du verrou', style: texte(20, graisse: 600, espacement: -0.4)),
-              const SizedBox(height: 6),
-              Text(
-                "Colle la clé privée du verrou (le fichier etat/verrou/cle du serveur). Elle sera chiffrée dans la puce "
-                "du téléphone, et ne servira qu'après ton empreinte.",
-                style: texte(13.5, couleur: Couleurs.secondaire, hauteur: 1.4),
+  /// La fenêtre où l'admin colle la clé du verrou, ou une sauvegarde de
+  /// secours : dans ce cas, elle montre l'empreinte du verrou qu'annonce la
+  /// sauvegarde et demande sa phrase. [colle] reçoit ce que le bouton
+  /// « Coller » a lu.
+  Future<({String texte, String phrase})?> _demanderVerrou(
+    BuildContext context,
+    TextEditingController champ,
+    TextEditingController phrase,
+    void Function(String) colle,
+  ) =>
+      showDialog<({String texte, String phrase})>(
+        context: context,
+        barrierColor: const Color(0xA8020407),
+        builder: (context) => StatefulBuilder(builder: (context, maj) {
+          final secours = estSecours(champ.text);
+          final annonce = secours ? empreinteSecours(champ.text) : null;
+          final autre = annonce != null && r.empreinteVerrou.isNotEmpty && annonce != r.empreinteVerrou;
+          // Une sauvegarde attend sa phrase, et doit être lisible.
+          final pret = !secours || (annonce != null && phrase.text.isNotEmpty);
+          void valider() {
+            if (!pret) return;
+            Navigator.pop(context, (texte: champ.text.trim(), phrase: secours ? phrase.text : ''));
+          }
+
+          return Fenetre(enfants: [
+            Text('Clé du verrou', style: texte(20, graisse: 600, espacement: -0.4)),
+            const SizedBox(height: 6),
+            Text(
+              "Colle la clé privée du verrou (le fichier etat/verrou/cle du serveur), ou sa sauvegarde de secours. "
+              "Elle sera chiffrée dans la puce du téléphone, et ne servira qu'après ton empreinte.",
+              style: texte(13.5, couleur: Couleurs.secondaire, hauteur: 1.4),
+            ),
+            const SizedBox(height: 16),
+            ChampMasque(
+              controleur: champ,
+              indication: 'Clé ou sauvegarde',
+              enMono: true,
+              autofocus: true,
+              onChanged: (_) => maj(() {}),
+              fin: TextButton(
+                onPressed: () async {
+                  final texte = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim() ?? '';
+                  colle(texte);
+                  champ.text = texte;
+                  maj(() {});
+                },
+                child: Text('Coller', style: texte(13, graisse: 600, couleur: Couleurs.cyan)),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: champ,
-                autofocus: true,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                style: mono(15, graisse: 400),
-                decoration: InputDecoration(
-                  hintText: 'Clé en base64',
-                  hintStyle: mono(15, graisse: 400, couleur: Couleurs.tertiaire),
-                  filled: true,
-                  fillColor: Couleurs.bloc,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  suffixIcon: TextButton(
-                    onPressed: () async {
-                      final texte = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim() ?? '';
-                      colle(texte);
-                      champ.text = texte;
-                    },
-                    child: Text('Coller', style: texte(13, graisse: 600, couleur: Couleurs.cyan)),
-                  ),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Couleurs.bordure)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Couleurs.cyan)),
-                ),
-              ),
-              const SizedBox(height: 18),
+            ),
+            if (secours) ...[
+              const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: BoutonFantome(libelle: 'Annuler', onTap: () => Navigator.pop(context))),
-                const SizedBox(width: 10),
+                Icone(autre || annonce == null ? Ico.info : Ico.coche,
+                    couleur: autre || annonce == null ? Couleurs.rouge : Couleurs.vert, taille: 17),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: BoutonFantome(
-                    libelle: 'Ranger',
-                    couleur: Couleurs.cyan,
-                    bord: Couleurs.cyan.withValues(alpha: 0.5),
-                    onTap: () => Navigator.pop(context, champ.text.trim()),
+                  child: Text(
+                    annonce == null
+                        ? 'Sauvegarde de secours illisible : incomplète ?'
+                        : autre
+                            ? "Sauvegarde d'un autre verrou ($annonce)"
+                            : 'Sauvegarde de secours du verrou $annonce',
+                    style: texte(13, couleur: autre || annonce == null ? Couleurs.rougeClair : Couleurs.vert),
                   ),
                 ),
               ]),
+              const SizedBox(height: 10),
+              ChampMasque(
+                controleur: phrase,
+                indication: 'Sa phrase de passe',
+                action: TextInputAction.done,
+                onChanged: (_) => maj(() {}),
+                onSubmitted: (_) => valider(),
+              ),
+            ],
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(child: BoutonFantome(libelle: 'Annuler', onTap: () => Navigator.pop(context))),
+              const SizedBox(width: 10),
+              Expanded(
+                child: BoutonFantome(
+                  libelle: secours ? 'Ouvrir' : 'Ranger',
+                  couleur: pret ? Couleurs.cyan : Couleurs.tertiaire,
+                  bord: pret ? Couleurs.cyan.withValues(alpha: 0.5) : Couleurs.bordure,
+                  onTap: pret ? valider : null,
+                ),
+              ),
             ]),
-          ),
-        ),
-      ),
-    );
+          ]);
+        }),
+      );
 
   /// Retirer la clé du verrou de ce téléphone : il ne pourra plus signer.
   /// La clé elle-même reste sur le serveur du verrou (etat/verrou/cle).
@@ -342,10 +373,23 @@ class _Securite extends StatelessWidget {
                 : "Pas encore sur ce téléphone : touche ici pour la ranger.",
             fin: r.reel ? const Chevron() : null,
             onTap: !r.reel ? null : r.cleVerrouPresente ? () => _retirerVerrou(context) : () => _importerVerrou(context),
+            separateur: _secours,
+            dense: true,
+          ),
+        // La sauvegarde de secours : il faut la clé dans le coffre.
+        if (_secours)
+          LigneReglage(
+            ico: Ico.cle,
+            libelle: 'Sauvegarde de secours',
+            sousTitre: 'La clé du verrou, chiffrée par une phrase de passe, à ranger hors du téléphone.',
+            fin: const Chevron(),
+            onTap: () => sauvegarderSecours(context),
             separateur: false,
             dense: true,
           ),
       ]);
+
+  bool get _secours => r.admin && (!r.reel || r.cleVerrouPresente);
 }
 
 /// Ranger la clé du verrou, depuis n'importe quel écran (les demandes).

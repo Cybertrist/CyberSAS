@@ -42,6 +42,9 @@ class MainActivity : FlutterFragmentActivity() {
         private const val AUTORISATION_VPN = 42
         private const val SANS_EMPREINTE =
             "Aucune empreinte enregistrée sur ce téléphone : ajoute-en une dans les réglages d'Android."
+
+        // Le début d'une sauvegarde de secours de la clé du verrou.
+        private const val SECOURS = "cybersas-secours-"
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -130,6 +133,7 @@ class MainActivity : FlutterFragmentActivity() {
                     dossier.path,
                     appel.argument<String>("graine") ?: "",
                     appel.argument<String>("titre") ?: "Ranger la clé du verrou",
+                    appel.argument<String>("phrase") ?: "",
                     reponse,
                 )
                 "coffreEffacer" -> { Coffre.effacer(this); reponse.success(null) }
@@ -141,6 +145,15 @@ class MainActivity : FlutterFragmentActivity() {
                     val fiches = appel.argument<String>("fiches") ?: "[]"
                     avecLeVerrou(appel.argument<String>("titre") ?: "Signer", appel.argument<String>("detail") ?: "", reponse) { graine ->
                         Pont.signer(dossier.path, graine, fiches)
+                    }
+                }
+                // La sauvegarde de secours : la clé sort du coffre pour cette
+                // seule opération, et seul le texte chiffré par la phrase
+                // remonte vers Flutter.
+                "secours" -> {
+                    val phrase = appel.argument<String>("phrase") ?: ""
+                    avecLeVerrou(appel.argument<String>("titre") ?: "Sauvegarde de secours", appel.argument<String>("detail") ?: "", reponse) { graine ->
+                        Pont.sauverVerrou(dossier.path, graine, phrase)
                     }
                 }
                 "revoquer" -> {
@@ -213,19 +226,24 @@ class MainActivity : FlutterFragmentActivity() {
 
     // Range la clé du verrou collée par l'admin. La graine est vérifiée
     // (c'est bien celle du verrou de ce réseau) avant d'ouvrir l'invite :
-    // pas d'empreinte pour une clé fausse.
+    // pas d'empreinte pour une clé fausse. Une sauvegarde de secours
+    // (cybersas-secours-…) est d'abord ouverte par le moteur avec sa
+    // phrase : la graine qui en sort va droit au coffre, sans repasser par
+    // Flutter.
     //
     // La graine arrive de Flutter en String (le canal n'a pas mieux), et le
     // moteur Go la prend en String aussi : ces copies-là ne peuvent pas être
     // effacées, elles attendent le ramasse-miettes. Les tableaux d'octets,
     // eux, sont remis à zéro dès qu'ils ont servi.
-    private fun coffreRanger(dossier: String, graineTexte: String, titre: String, reponse: MethodChannel.Result) {
-        val graine = graineTexte.trim()
+    private fun coffreRanger(dossier: String, graineTexte: String, titre: String, phrase: String, reponse: MethodChannel.Result) {
+        val texte = graineTexte.trim()
         if (!empreintePossible(reponse)) return
         travail.execute {
+            val graine: String
             val empreinte: String
             val chiffreur: Coffre.Chiffreur
             try {
+                graine = if (texte.startsWith(SECOURS)) Pont.restaurerVerrou(dossier, texte, phrase) else texte
                 empreinte = Pont.verifierVerrou(dossier, graine)
                 chiffreur = Coffre.chiffreur(this)
             } catch (t: Throwable) {

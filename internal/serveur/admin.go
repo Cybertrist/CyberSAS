@@ -41,9 +41,20 @@ func (s *Serveur) estAdmin(a base.Appareil) bool {
 		return false
 	}
 	if cle, _ := s.verrou(); cle != nil {
-		return len(a.Signature) > 0 && a.SignatureGroupe == "admins" && time.Now().Before(a.SignatureExpire)
+		return groupeCertifie(a, time.Now()) == "admins"
 	}
 	return true
+}
+
+// groupeCertifie : le groupe que porte le certificat de cet appareil, s'il
+// en a un en cours de validité ; vide sinon. Les certificats sont vérifiés
+// avec la clé du verrou avant d'entrer en base (sasd signatures, route des
+// signatures) : ici, on ne regarde plus que le groupe et la date.
+func groupeCertifie(a base.Appareil, maintenant time.Time) string {
+	if len(a.Signature) == 0 || !maintenant.Before(a.SignatureExpire) {
+		return ""
+	}
+	return a.SignatureGroupe
 }
 
 // libelle change le nom affiché de son appareil ; un admin, de n'importe

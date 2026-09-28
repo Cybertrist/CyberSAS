@@ -51,6 +51,10 @@ type Appareil struct {
 	Adresse      netip.Addr
 	Proprietaire string
 	Etiquette    string
+	// HorsGroupe : la personne est dans l'équipe, mais cet appareil ne
+	// compte dans aucun « groupe: » (côté serveur, avec un verrou : son
+	// certificat ne porte pas le groupe que lui donne l'équipe).
+	HorsGroupe bool
 }
 
 type Port struct {
@@ -147,7 +151,7 @@ func correspond(sel string, a Appareil, e Equipe) bool {
 	case sel == "*":
 		return true
 	case strings.HasPrefix(sel, "groupe:"):
-		return a.Proprietaire != "" && e[a.Proprietaire] == strings.TrimPrefix(sel, "groupe:")
+		return a.Proprietaire != "" && !a.HorsGroupe && e[a.Proprietaire] == strings.TrimPrefix(sel, "groupe:")
 	case strings.HasPrefix(sel, "etiquette:"):
 		return a.Etiquette != "" && a.Etiquette == strings.TrimPrefix(sel, "etiquette:")
 	case strings.HasPrefix(sel, "utilisateur:"):

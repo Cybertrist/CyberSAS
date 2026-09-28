@@ -1,13 +1,16 @@
 package serveur
 
 import (
+	"encoding/base64"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Cybertrist/CyberSAS/internal/politique"
 	"github.com/Cybertrist/CyberSAS/internal/protocole"
+	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
 
 // L'équipe depuis l'appli : réservée aux admins ; ajouter, changer de
@@ -133,5 +136,84 @@ func TestReecrireEquipe(t *testing.T) {
 		if r := reecrireEquipe(c.avant, c.adresse, c.groupe); r != c.apres {
 			t.Errorf("%q, %s %s : %q, %q attendu", c.avant, c.adresse, c.groupe, r, c.apres)
 		}
+	}
+}
+
+// equipe.txt s'écrit d'abord, puis la liste des services web ; si celle-ci
+// échoue, l'ancienne équipe est remise : jamais une personne retirée du
+// VPN qui garderait les pages web.
+func TestEquipeListeWebEnEchec(t *testing.T) {
+	b := nouveauBanc(t)
+	// Un dossier qui n'existe pas : la liste web ne peut pas s'écrire.
+	b.srv.cfg.EquipeWeb = filepath.Join(b.dossier, "absent", "emails.txt")
+	avant := "# l'équipe\nadmin@x.fr admins\nbob@x.fr equipe\n"
+	os.WriteFile(b.srv.cfg.Equipe, []byte(avant), 0o600)
+	admin := b.inscrire("", "admin@x.fr", "fold")
+	bob := b.inscrire("", "bob@x.fr", "tel")
+
+	if code := b.appel("POST", protocole.CheminEquipe, admin.Jeton, protocole.DemandeMembre{Adresse: "bob@x.fr"}, nil); code != http.StatusInternalServerError {
+		t.Fatalf("liste web impossible : %d, 500 attendu", code)
+	}
+	if brut, _ := os.ReadFile(b.srv.cfg.Equipe); string(brut) != avant {
+		t.Errorf("equipe.txt n'a pas été remis :\n%s", brut)
+	}
+	if code := b.appel("GET", protocole.CheminReseau, bob.Jeton, nil, nil); code != http.StatusOK {
+		t.Errorf("Bob coupé alors que le changement a échoué : %d", code)
+	}
+	restes, _ := filepath.Glob(filepath.Join(b.dossier, "*.tmp"))
+	if len(restes) != 0 {
+		t.Errorf("fichiers temporaires laissés : %v", restes)
+	}
+}
+
+// Avec un verrou, le serveur ne range un appareil dans un groupe que si
+// son certificat porte ce groupe, et que l'équipe le lui donne encore :
+// un serveur piraté qui promeut quelqu'un dans equipe.txt n'ouvre pas de
+// relais de plus, et un admin rétrogradé perd l'accès des admins.
+func TestGroupeSigne(t *testing.T) {
+	b := nouveauBanc(t)
+	pub, prive, _ := verrou.Generer()
+	cheminVerrou := filepath.Join(b.dossier, "verrou")
+	os.WriteFile(cheminVerrou, []byte(base64.StdEncoding.EncodeToString(pub)), 0o600)
+	os.WriteFile(b.srv.cfg.Politique, []byte(`{"version": 1, "regles": [
+		{"de": ["groupe:admins"], "vers": ["etiquette:maison"], "ports": ["tcp:22"]}
+	]}`), 0o600)
+	os.WriteFile(b.srv.cfg.Equipe, []byte("alice@x.fr admins\n"), 0o600)
+	maison := b.inscrire("maison", "", "maison")
+	alice := b.inscrire("", "alice@x.fr", "portable")
+	relie := func() bool {
+		t.Helper()
+		if err := b.srv.Synchroniser(); err != nil {
+			t.Fatal(err)
+		}
+		return b.srv.Relie(alice.Appareil.Numero, maison.Appareil.Numero)
+	}
+
+	if !relie() {
+		t.Fatal("sans verrou, equipe.txt décide : alice, admin, devrait joindre la maison")
+	}
+	b.srv.cfg.Verrou = cheminVerrou
+	if relie() {
+		t.Error("avec un verrou, un appareil sans certificat compte parmi les admins")
+	}
+	b.certifier(t, prive, alice, "equipe", time.Hour)
+	if relie() {
+		t.Error("signé pour equipe, promu admins dans equipe.txt : relié quand même")
+	}
+	b.certifier(t, prive, alice, "admins", -time.Minute)
+	if relie() {
+		t.Error("certificat d'admin expiré : relié quand même")
+	}
+	b.certifier(t, prive, alice, "admins", time.Hour)
+	if !relie() {
+		t.Error("signé admins et admin dans l'équipe : devrait joindre la maison")
+	}
+	os.WriteFile(b.srv.cfg.Equipe, []byte("alice@x.fr equipe\n"), 0o600)
+	if relie() {
+		t.Error("rétrogradée dans equipe.txt : garde l'accès des admins")
+	}
+	os.WriteFile(b.srv.cfg.Equipe, []byte("bob@x.fr admins\n"), 0o600)
+	if relie() {
+		t.Error("sortie de l'équipe : garde l'accès de son certificat")
 	}
 }

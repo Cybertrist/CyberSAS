@@ -212,11 +212,11 @@ func Reseau(dossier string) (string, error) {
 		return "", err
 	}
 	ret := e.Retenu
-	_, ecartes, err := client.Construire(r, &ret, netip.AddrPort{}, time.Now())
+	_, ecartes, sortant, err := client.ConstruireAvecSortant(r, &ret, netip.AddrPort{}, time.Now())
 	if err != nil {
 		return "", err
 	}
-	return vueJSON(appareil.Vue{Reseau: r, Ecartes: ecartes}, false, "", time.Now()), nil
+	return vueJSON(appareil.Vue{Reseau: r, Ecartes: ecartes, Sortant: sortant}, false, "", time.Now()), nil
 }
 
 // Inviter : un lien d'invitation pour un membre de l'équipe, comme

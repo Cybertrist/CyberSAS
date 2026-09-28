@@ -276,7 +276,9 @@ class _Ligne extends StatelessWidget {
                 Text(a.adresse, style: mono(12.5, graisse: 400, couleur: Couleurs.etiquette)),
               ]),
             ),
-            for (final p in a.ports) ...[const SizedBox(width: 4), PucePort(p)],
+            // Dans la liste, seulement les ports TCP précis : « tout ouvert »
+            // sur chaque ligne d'un admin ne dirait rien.
+            for (final p in a.ports.where((p) => p.startsWith('tcp:')).take(3)) ...[const SizedBox(width: 4), PucePort(p)],
             const SizedBox(width: 10),
             // Tunnel coupé : d'ici, on ne sait plus qui est en ligne.
             _Point(a.enLigne && EtatReseau.of(context).enService),

@@ -223,6 +223,35 @@ func Joignables(flux []Flux, depuis netip.Addr) map[netip.Addr]bool {
 	return r
 }
 
+// Sortant : pour un appareil, ce qu'il a le droit d'ouvrir chez chacun des
+// autres, ports rassemblés sans doublon (« * » seul s'il couvre tout).
+// L'appli s'en sert pour les ports affichés et le bouton du navigateur ;
+// c'est le pendant d'Entrant, que le pair appliquera de son côté.
+func Sortant(flux []Flux, moi netip.Addr) map[netip.Addr][]Port {
+	r := map[netip.Addr][]Port{}
+	for _, f := range flux {
+		if !slices.Contains(f.Sources, moi) {
+			continue
+		}
+		for _, d := range f.Dest {
+			if d == moi {
+				continue
+			}
+			for _, p := range f.Ports {
+				if !slices.Contains(r[d], p) {
+					r[d] = append(r[d], p)
+				}
+			}
+		}
+	}
+	for d, ports := range r {
+		if slices.Contains(ports, Port{Proto: "*"}) {
+			r[d] = []Port{{Proto: "*"}}
+		}
+	}
+	return r
+}
+
 // String rend un port sous la forme qu'accepte LirePorts.
 func (p Port) String() string {
 	switch {

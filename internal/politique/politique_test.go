@@ -100,6 +100,32 @@ func TestRelationsEtEntrant(t *testing.T) {
 	}
 }
 
+func TestSortant(t *testing.T) {
+	flux := pol.Compiler(equipe, apps, serveur)
+	chaine := func(ports []Port) string {
+		var s []string
+		for _, p := range ports {
+			s = append(s, p.String())
+		}
+		return strings.Join(s, ",")
+	}
+	// Alice : la maison en web, son autre appareil en tout, rien d'autre.
+	s := Sortant(flux, a("10.77.0.3"))
+	for dest, attendu := range map[string]string{"10.77.0.2": "tcp:80,tcp:443", "10.77.0.4": "*", "10.77.0.5": "", "10.77.0.3": ""} {
+		if got := chaine(s[a(dest)]); got != attendu {
+			t.Errorf("alice vers %s : %q, attendu %q", dest, got, attendu)
+		}
+	}
+	// L'admin : « * » absorbe tout le reste, bob n'y est plus.
+	s = Sortant(flux, a("10.77.0.5"))
+	if got := chaine(s[a("10.77.0.2")]); got != "*" {
+		t.Errorf("admin vers la maison : %q, attendu *", got)
+	}
+	if _, ok := s[a("10.77.0.6")]; ok {
+		t.Error("bob est sorti : l'admin ne doit rien pouvoir lui ouvrir")
+	}
+}
+
 func TestPortsIllisibles(t *testing.T) {
 	for _, p := range []string{"tcp", "tcp:abc", "tcp:90-80", "ssh"} {
 		if _, err := LirePorts([]string{p}); err == nil {

@@ -210,20 +210,29 @@ type Ecarte struct {
 //   - une politique ou une liste de révocation plus ancienne que la
 //     dernière vue est refusée.
 func Construire(r protocole.EtatReseau, ret *Retenu, point netip.AddrPort, maintenant time.Time) ([]tunnel.Pair, []Ecarte, error) {
+	pairs, ecartes, _, err := ConstruireAvecSortant(r, ret, point, maintenant)
+	return pairs, ecartes, err
+}
+
+// ConstruireAvecSortant : comme Construire, et en plus ce que cet appareil
+// a le droit d'ouvrir chez chaque pair, calculé depuis la politique signée.
+// Nil quand on ne le sait pas (pas de verrou, pas de politique valide, ou
+// cet appareil pas encore signé) : l'appli ne doit alors rien en conclure.
+func ConstruireAvecSortant(r protocole.EtatReseau, ret *Retenu, point netip.AddrPort, maintenant time.Time) ([]tunnel.Pair, []Ecarte, map[netip.Addr][]politique.Port, error) {
 	if r.Serveur.ClePublique != ret.CleServeur {
-		return nil, nil, errors.New("le serveur annonce une autre clé que celle retenue à l'inscription : refus")
+		return nil, nil, nil, errors.New("le serveur annonce une autre clé que celle retenue à l'inscription : refus")
 	}
 	if r.Verrou != ret.Verrou {
-		return nil, nil, fmt.Errorf("le serveur annonce un autre verrou (%s) que celui retenu (%s) : refus",
+		return nil, nil, nil, fmt.Errorf("le serveur annonce un autre verrou (%s) que celui retenu (%s) : refus",
 			EmpreinteVerrou(r.Verrou), EmpreinteVerrou(ret.Verrou))
 	}
 	adresseServeur, err := netip.ParseAddr(r.Serveur.Adresse)
 	if err != nil || !adresseServeur.Is4() || !ret.Reseau.Contains(adresseServeur) {
-		return nil, nil, errors.New("adresse du serveur invalide")
+		return nil, nil, nil, errors.New("adresse du serveur invalide")
 	}
 	pubServeur, err := cle32(ret.CleServeur)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var ecartes []Ecarte
@@ -247,6 +256,7 @@ func Construire(r protocole.EtatReseau, ret *Retenu, point netip.AddrPort, maint
 	}
 	var retenus []retenuPair
 	var entrant map[netip.Addr][]tunnel.Regle
+	var sortant map[netip.Addr][]politique.Port
 
 	if ret.Verrou == "" {
 		for _, p := range r.Pairs {
@@ -255,12 +265,12 @@ func Construire(r protocole.EtatReseau, ret *Retenu, point netip.AddrPort, maint
 			}
 		}
 		if entrant, err = entrantAnnonce(r.Entrant); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	} else {
 		cleVerrou, err := verrou.LirePublique(ret.Verrou)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		ecartes = append(ecartes, adopterRevocations(r.Revocations, cleVerrou, ret)...)
 		// Les révocations se comparent sur les octets des clés, jamais sur
@@ -318,10 +328,11 @@ func Construire(r protocole.EtatReseau, ret *Retenu, point netip.AddrPort, maint
 		entrant = map[netip.Addr][]tunnel.Regle{}
 		if pol != nil && len(apps) > 0 && apps[0].Adresse == ret.Moi {
 			flux := pol.Compiler(equipe, apps, adresseServeur)
+			sortant = politique.Sortant(flux, ret.Moi)
 			for _, e := range politique.Entrant(flux, ret.Moi) {
 				regles, err := versRegles(e.Ports)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 				entrant[e.Source] = append(entrant[e.Source], regles...)
 			}
@@ -334,7 +345,7 @@ func Construire(r protocole.EtatReseau, ret *Retenu, point netip.AddrPort, maint
 		pairs = append(pairs, tunnel.Pair{Publique: x.pub, Adresses: []netip.Prefix{netip.PrefixFrom(x.a, 32)},
 			Numero: x.p.Numero, ParRelais: true, Entrant: entrant[x.a]})
 	}
-	return pairs, ecartes, nil
+	return pairs, ecartes, sortant, nil
 }
 
 // adopterRevocations : une liste signée plus récente que la nôtre la

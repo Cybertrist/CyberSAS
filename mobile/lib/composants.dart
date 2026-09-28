@@ -175,10 +175,11 @@ class Puce extends StatelessWidget {
   );
 }
 
-/// « :80 » : un port ouvert.
+/// « :80 » : un port ouvert, écrit comme dans la politique (« tcp:80 »,
+/// « udp:53 », « icmp »). Le TCP, le plus courant, perd son préfixe.
 class PucePort extends StatelessWidget {
   const PucePort(this.port, {super.key});
-  final int port;
+  final String port;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -187,7 +188,7 @@ class PucePort extends StatelessWidget {
       borderRadius: BorderRadius.circular(6),
       border: Border.all(color: Couleurs.cyan.withValues(alpha: 0.32)),
     ),
-    child: Text(':$port', style: mono(11.5, graisse: 400, couleur: Couleurs.cyan)),
+    child: Text(port.startsWith('tcp:') ? port.substring(3) : port, style: mono(11.5, graisse: 400, couleur: Couleurs.cyan)),
   );
 }
 

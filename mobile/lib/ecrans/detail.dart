@@ -54,7 +54,7 @@ class EcranDetail extends StatelessWidget {
                   ]),
                 ),
               ),
-              if (a.ports.isNotEmpty) ...[const SizedBox(height: 14), _BoutonOuvrir(a: a)],
+              if (a.web != null) ...[const SizedBox(height: 14), _BoutonOuvrir(a: a)],
               if (EtatReseau.of(context).peutRetirer(a)) ...[
                 const SizedBox(height: 10),
                 _BoutonRetirer(a: a, apres: () => Navigator.pop(context)),
@@ -81,7 +81,7 @@ class PanneauDetail extends StatelessWidget {
       const Etiquette('Appareils / '),
       Flexible(child: Etiquette(a.nomAffiche, couleur: Couleurs.texte)),
     ]);
-    final bouton = a.ports.isNotEmpty ? _BoutonOuvrir(a: a) : null;
+    final bouton = a.web != null ? _BoutonOuvrir(a: a) : null;
     final retirer = EtatReseau.of(context).peutRetirer(a) ? _BoutonRetirer(a: a) : null;
     // Rien n'est étiré pour remplir la hauteur : le panneau défile si le
     // contenu ne tient pas, au lieu d'écraser la carte du certificat.
@@ -269,11 +269,16 @@ class _Grille extends StatelessWidget {
         _Case('Adresse', Text(a.adresse, style: mono(14.5, graisse: 400))),
         _Case(
           'Ports ouverts',
-          a.ports.isEmpty
-              // Le moteur ne donne pas encore les ports : sur le vrai
-              // réseau, « aucun » serait faux.
-              ? Text(EtatReseau.of(context).reel ? 'selon la politique' : 'aucun', style: texte(14, couleur: Couleurs.tertiaire))
-              : Wrap(spacing: 4, runSpacing: 4, children: [for (final p in a.ports) PucePort(p)]),
+          // Politique pas vérifiée par le moteur : « aucun » serait faux.
+          !a.portsConnus
+              ? Text('selon la politique', style: texte(14, couleur: Couleurs.tertiaire))
+              : a.moi
+                  ? Text('cet appareil', style: texte(14, couleur: Couleurs.tertiaire))
+                  : a.toutOuvert
+                      ? Text('tous', style: texte(14, graisse: 600, couleur: Couleurs.cyan))
+                      : a.ports.isEmpty
+                          ? Text('aucun', style: texte(14, couleur: Couleurs.tertiaire))
+                          : Wrap(spacing: 4, runSpacing: 4, children: [for (final p in a.ports) PucePort(p)]),
         ),
       ),
       if (complete) ...[
@@ -406,7 +411,7 @@ class _BoutonOuvrir extends StatelessWidget {
         onTap: () async {
           var ok = false;
           try {
-            ok = await launchUrl(Uri.parse('https://${a.nomInterne}'), mode: LaunchMode.externalApplication);
+            ok = await launchUrl(a.web!, mode: LaunchMode.externalApplication);
           } on Exception {
             ok = false;
           }

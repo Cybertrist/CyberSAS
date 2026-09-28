@@ -27,6 +27,7 @@ import (
 	"github.com/Cybertrist/CyberSAS/internal/b64"
 	"github.com/Cybertrist/CyberSAS/internal/client"
 	"github.com/Cybertrist/CyberSAS/internal/noise"
+	"github.com/Cybertrist/CyberSAS/internal/politique"
 	"github.com/Cybertrist/CyberSAS/internal/protocole"
 	"github.com/Cybertrist/CyberSAS/internal/tunnel"
 )
@@ -199,6 +200,9 @@ type Interface interface {
 type Vue struct {
 	Reseau  protocole.EtatReseau
 	Ecartes []client.Ecarte
+	// Sortant : ce que cet appareil peut ouvrir chez chaque pair, d'après
+	// la politique signée ; nil quand on ne le sait pas.
+	Sortant map[netip.Addr][]politique.Port
 	Moteur  *tunnel.Moteur
 	Erreur  error
 }
@@ -279,7 +283,7 @@ func Tenir(ctx context.Context, t Tenue) error {
 			demande = time.Now()
 			vue := Vue{Moteur: moteur}
 			var refus string
-			refus, vue.Reseau, vue.Ecartes, vue.Erreur = t.appliquer(moteur, &courant)
+			refus, vue.Reseau, vue.Ecartes, vue.Sortant, vue.Erreur = t.appliquer(moteur, &courant)
 			switch {
 			case errors.Is(vue.Erreur, client.ErrDesinscrit):
 				t.Journal.Warn("le serveur ne connaît plus cet appareil : tunnel coupé")
@@ -312,29 +316,29 @@ func Tenir(ctx context.Context, t Tenue) error {
 // appliquer : l'état du réseau, vérifié, devient la liste des pairs. Ce
 // que l'appareil apprend en chemin (versions signées, révocations) est
 // écrit sur disque : il ne l'oublie pas en redémarrant.
-func (t Tenue) appliquer(m *tunnel.Moteur, e *Etat) (string, protocole.EtatReseau, []client.Ecarte, error) {
+func (t Tenue) appliquer(m *tunnel.Moteur, e *Etat) (string, protocole.EtatReseau, []client.Ecarte, map[netip.Addr][]politique.Port, error) {
 	api, err := t.API(e.Serveur)
 	if err != nil {
-		return "", protocole.EtatReseau{}, nil, err
+		return "", protocole.EtatReseau{}, nil, nil, err
 	}
 	r, err := LireReseau(api, *e)
 	if err != nil {
-		return "", r, nil, err
+		return "", r, nil, nil, err
 	}
 	point, err := net.ResolveUDPAddr("udp", e.Inscription.Serveur.Point)
 	if err != nil {
-		return "", r, nil, fmt.Errorf("point %s : %w", e.Inscription.Serveur.Point, err)
+		return "", r, nil, nil, fmt.Errorf("point %s : %w", e.Inscription.Serveur.Point, err)
 	}
 	ret := e.Retenu
-	pairs, ecartes, err := client.Construire(r, &ret, point.AddrPort(), time.Now())
+	pairs, ecartes, sortant, err := client.ConstruireAvecSortant(r, &ret, point.AddrPort(), time.Now())
 	if err != nil {
-		return "", r, nil, err
+		return "", r, nil, nil, err
 	}
 	if ret.VersionPolitique != e.Retenu.VersionPolitique || ret.VersionRevocations != e.Retenu.VersionRevocations {
 		nouveau := *e
 		nouveau.Retenu = ret
 		if err := t.Stockage.Ecrire(nouveau); err != nil {
-			return "", r, ecartes, err
+			return "", r, ecartes, sortant, err
 		}
 		*e = nouveau
 	}
@@ -343,7 +347,7 @@ func (t Tenue) appliquer(m *tunnel.Moteur, e *Etat) (string, protocole.EtatResea
 	for _, x := range ecartes {
 		refus = append(refus, fmt.Sprintf("%s (%s) : %s", x.Nom, x.Adresse, x.Raison))
 	}
-	return strings.Join(refus, " ; "), r, ecartes, nil
+	return strings.Join(refus, " ; "), r, ecartes, sortant, nil
 }
 
 // ReseauAcceptable : le serveur choisit le réseau que le téléphone route

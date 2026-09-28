@@ -4,12 +4,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Cybertrist/CyberSAS/internal/appareil"
 	"github.com/Cybertrist/CyberSAS/internal/client"
+	"github.com/Cybertrist/CyberSAS/internal/politique"
 	"github.com/Cybertrist/CyberSAS/internal/protocole"
 	"github.com/Cybertrist/CyberSAS/internal/verrou"
 )
@@ -66,6 +68,32 @@ func TestVueReseau(t *testing.T) {
 		if p.Session {
 			t.Errorf("%s a une session sans moteur", p.Nom)
 		}
+	}
+}
+
+// Les ports viennent de la politique vérifiée : connus, chaque pair porte
+// ce qu'on peut lui ouvrir ; inconnus, l'appli ne doit rien en conclure.
+func TestVuePorts(t *testing.T) {
+	r := protocole.EtatReseau{
+		Serveur: protocole.Serveur{ClePublique: "zKaLpkfwgqY3dEfBoAqXd+bsVVrXxGkRCq13XRRO/EY=", Adresse: "10.77.0.1"},
+		Moi:     protocole.Appareil{Nom: "fold8-tristan", Adresse: "10.77.0.18"},
+		Pairs:   []protocole.Appareil{{Nom: "maison", Adresse: "10.77.0.2"}, {Nom: "portable", Adresse: "10.77.0.3"}},
+	}
+	sortant := map[netip.Addr][]politique.Port{
+		netip.MustParseAddr("10.77.0.2"): {{Proto: "tcp", Debut: 80, Fin: 80}, {Proto: "tcp", Debut: 443, Fin: 443}},
+	}
+	v := lireVue(t, vueJSON(appareil.Vue{Reseau: r, Sortant: sortant}, true, "", time.Now()))
+	if !v.PortsConnus {
+		t.Error("ports connus attendus")
+	}
+	for _, p := range v.Pairs {
+		attendu := map[string]string{"maison": "tcp:80 tcp:443"}[p.Nom]
+		if got := strings.Join(p.Ports, " "); got != attendu {
+			t.Errorf("%s : ports %q, attendu %q", p.Nom, got, attendu)
+		}
+	}
+	if v := lireVue(t, vueJSON(appareil.Vue{Reseau: r}, true, "", time.Now())); v.PortsConnus {
+		t.Error("sans politique vérifiée, les ports ne sont pas connus")
 	}
 }
 

@@ -62,6 +62,7 @@ class Appareil {
     this.enLigne = false,
     this.moi = false,
     this.ports = const [],
+    this.portsConnus = true,
     this.signe = true,
     this.raison = '',
     this.suffixeReseau = '',
@@ -106,7 +107,39 @@ class Appareil {
   final Certificat certificat;
   final bool enLigne;
   final bool moi;
-  final List<int> ports;
+
+  /// Ce que ce téléphone a le droit d'ouvrir chez lui, écrit comme dans la
+  /// politique : « tcp:80 », « udp:53 », « icmp », « * » pour tout.
+  final List<String> ports;
+
+  /// Faux quand le moteur n'a pas pu vérifier la politique (pas encore
+  /// signé, politique refusée) : [ports] vide ne veut alors rien dire.
+  final bool portsConnus;
+
+  /// Tout est ouvert (« * »), comme pour un admin.
+  bool get toutOuvert => ports.contains('*');
+
+  /// Un port TCP précis est ouvert, seul ou dans une plage.
+  bool ouvert(int port) => toutOuvert || ports.any((p) {
+        if (!p.startsWith('tcp:')) return false;
+        final plage = p.substring(4).split('-');
+        final debut = int.tryParse(plage.first);
+        final fin = int.tryParse(plage.last);
+        return debut != null && fin != null && debut <= port && port <= fin;
+      });
+
+  /// L'adresse à ouvrir dans le navigateur, ou null. Le port 80 d'abord :
+  /// dans le tunnel, le trafic est déjà chiffré de bout en bout. « * »
+  /// seul ne suffit que pour une machine : un téléphone ou un PC ouvert à
+  /// l'admin ne sert pas de page pour autant.
+  Uri? get web {
+    if (moi || type == TypeAppareil.serveur || !signe) return null;
+    final explicite = ports.any((p) => p.startsWith('tcp:'));
+    if (toutOuvert && !explicite && type != TypeAppareil.maison) return null;
+    if (ouvert(80)) return Uri.parse('http://$nomInterne');
+    if (ouvert(443)) return Uri.parse('https://$nomInterne');
+    return null;
+  }
 
   String get nomInterne => '$nom.sas.internal';
 
@@ -141,6 +174,7 @@ class Appareil {
         enLigne: enLigne,
         moi: moi,
         ports: ports,
+        portsConnus: portsConnus,
         signe: signe,
         raison: raison,
         suffixeReseau: suffixeReseau,
@@ -158,6 +192,7 @@ class Appareil {
         enLigne: enLigne,
         moi: moi,
         ports: ports,
+        portsConnus: portsConnus,
         signe: signe,
         raison: raison,
         suffixeReseau: suffixeReseau,
@@ -167,7 +202,7 @@ class Appareil {
       );
 
   /// Un appareil tel que le moteur le décrit (pont.Pair).
-  factory Appareil.duMoteur(Map<String, dynamic> j) {
+  factory Appareil.duMoteur(Map<String, dynamic> j, {bool portsConnus = false}) {
     final etiquette = j['etiquette'] as String? ?? '';
     final systeme = j['systeme'] as String? ?? '';
     final serveur = j['serveur'] == true;
@@ -187,6 +222,8 @@ class Appareil {
       proprietaire: serveur || etiquette.isNotEmpty ? 'admin' : email.toLowerCase(),
       enLigne: j['en_ligne'] == true,
       moi: j['moi'] == true,
+      ports: (j['ports'] as List? ?? []).whereType<String>().toList(),
+      portsConnus: portsConnus,
       signe: j['signe'] != false,
       raison: j['raison'] as String? ?? '',
       libelle: j['libelle'] as String? ?? '',
@@ -391,7 +428,7 @@ class Reseau extends ChangeNotifier {
       type: TypeAppareil.maison,
       proprietaire: 'admin',
       enLigne: true,
-      ports: const [80, 443],
+      ports: const ['tcp:80', 'tcp:443'],
       certificat: _certificat,
     ),
     Appareil(
@@ -640,15 +677,19 @@ class Reseau extends ChangeNotifier {
     serveurJoint = e['connecte'] == true;
     erreur = e['erreur'] as String? ?? '';
     List<Map<String, dynamic>> pairs = [];
+    var portsConnus = false;
     if (enMarche) {
       // Tunnel ouvert : le moteur sait tout, et dit s'il joint le serveur.
       pairs = (e['pairs'] as List? ?? []).cast<Map<String, dynamic>>();
+      portsConnus = e['ports_connus'] == true;
       if (serveurJoint) serveurInjoignable = false;
     } else if (_tours % 3 == 0 || appareils.isEmpty) {
       // Tunnel coupé : ce que le moteur garde est périmé, on demande à
       // l'API (une fois sur trois, toutes les six secondes).
       try {
-        pairs = ((await Moteur.reseau())['pairs'] as List? ?? []).cast<Map<String, dynamic>>();
+        final r = await Moteur.reseau();
+        pairs = (r['pairs'] as List? ?? []).cast<Map<String, dynamic>>();
+        portsConnus = r['ports_connus'] == true;
         serveurInjoignable = false;
       } on ErreurMoteur {
         // Serveur injoignable : on garde ce qu'on sait, et on le dit.
@@ -658,7 +699,7 @@ class Reseau extends ChangeNotifier {
     if (pairs.isNotEmpty) {
       appareils
         ..clear()
-        ..addAll(pairs.map(Appareil.duMoteur));
+        ..addAll(pairs.map((p) => Appareil.duMoteur(p, portsConnus: portsConnus)));
       if (!appareils.any((a) => a.nom == selection)) selection = appareils.first.nom;
       // Admin : d'après le groupe que le verrou a signé pour cet appareil.
       final m = appareils.where((a) => a.moi);
@@ -989,7 +1030,7 @@ String duree(Duration d) {
 }
 
 /// La version affichée dans « À propos » (même valeur que pubspec.yaml).
-const versionAppli = '0.8.0';
+const versionAppli = '0.8.1';
 
 /// « tristan.joncour@gmail.com » → « Tristan » : de quoi nommer quelqu'un
 /// sans son nom complet.

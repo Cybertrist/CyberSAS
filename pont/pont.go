@@ -247,6 +247,10 @@ type Pair struct {
 	Raison string `json:"raison,omitempty"`
 	// Session : une poignée de main a réussi récemment avec lui.
 	Session bool `json:"session"`
+	// Ports : ce que ce téléphone a le droit d'ouvrir chez lui (« tcp:80 »,
+	// « * »), d'après la politique signée. Sans objet si Vue.PortsConnus
+	// est faux.
+	Ports []string `json:"ports,omitempty"`
 }
 
 // Vue : l'état complet, en JSON.
@@ -256,6 +260,9 @@ type Vue struct {
 	Erreur   string   `json:"erreur,omitempty"`
 	Pairs    []Pair   `json:"pairs"`
 	Notes    []string `json:"notes,omitempty"`
+	// PortsConnus : la politique signée a été vérifiée et cet appareil est
+	// signé ; les Ports des pairs disent alors vraiment ce qui est ouvert.
+	PortsConnus bool `json:"ports_connus"`
 }
 
 // Etat : l'état du tunnel et du réseau, en JSON (Vue). L'appli le lit
@@ -272,7 +279,18 @@ func Etat() string {
 const recente = 3 * time.Minute
 
 func vueJSON(v appareil.Vue, marche bool, errMarche string, maintenant time.Time) string {
-	out := Vue{EnMarche: marche, Erreur: errMarche, Pairs: []Pair{}}
+	out := Vue{EnMarche: marche, Erreur: errMarche, Pairs: []Pair{}, PortsConnus: v.Sortant != nil}
+	ports := func(adresse string) []string {
+		a, err := netip.ParseAddr(adresse)
+		if err != nil {
+			return nil
+		}
+		var s []string
+		for _, p := range v.Sortant[a] {
+			s = append(s, p.String())
+		}
+		return s
+	}
 	if v.Erreur != nil {
 		out.Erreur = client.Propre(v.Erreur.Error())
 	}
@@ -287,7 +305,8 @@ func vueJSON(v appareil.Vue, marche bool, errMarche string, maintenant time.Time
 		pub, _ := cle32(r.Serveur.ClePublique)
 		out.Connecte = sessions[pub]
 		out.Pairs = append(out.Pairs, Pair{Nom: "serveur", Adresse: r.Serveur.Adresse, Etiquette: "serveur", Serveur: true,
-			EnLigne: out.Connecte, Signe: true, Session: out.Connecte, Empreinte: client.EmpreinteCle(r.Serveur.ClePublique)})
+			EnLigne: out.Connecte, Signe: true, Session: out.Connecte, Empreinte: client.EmpreinteCle(r.Serveur.ClePublique),
+			Ports: ports(r.Serveur.Adresse)})
 	}
 	refus := map[string]string{}
 	for _, x := range v.Ecartes {
@@ -303,7 +322,7 @@ func vueJSON(v appareil.Vue, marche bool, errMarche string, maintenant time.Time
 		return Pair{Nom: client.Propre(a.Nom), Libelle: client.Propre(a.Libelle), Adresse: a.Adresse, Proprietaire: client.Propre(a.Proprietaire),
 			Etiquette: client.Propre(a.Etiquette), Groupe: client.Propre(a.Groupe), Systeme: client.Propre(a.Systeme),
 			EnLigne: a.EnLigne || moi, Moi: moi, Empreinte: client.EmpreinteCle(a.ClePublique), Cle: a.ClePublique, Expire: a.SignatureExpire,
-			Signe: !ecarte, Raison: raison, Session: sessions[pub]}
+			Signe: !ecarte, Raison: raison, Session: sessions[pub], Ports: ports(a.Adresse)}
 	}
 	if r.Moi.Adresse != "" {
 		out.Pairs = append(out.Pairs, vers(r.Moi, true))

@@ -73,7 +73,7 @@ grille "$DOCS/schemas/equipe.png" 3 \
   "edit|Renommer|Chacun renomme ses appareils ; l'admin, tous. Le nom affiché ne fait pas partie du certificat : l'empreinte et l'adresse restent la référence." \
   "logout|Retirer|Un appareil dont on ne veut plus est coupé tout de suite. Retiré seulement, il pourrait se réinscrire." \
   "gpp_bad|Révoquer|Pour un appareil volé : la liste de révocation est signée sur le téléphone de l'admin, et aucun appareil ne revient jamais à une liste plus ancienne." \
-  "group|L'équipe elle-même|La liste des comptes Google qui ont le droit d'entrer vit sur le serveur, dans <code>equipe.txt</code>. Pour l'instant, elle se règle en ligne de commande."
+  "group|L'équipe elle-même|La liste des comptes Google qui ont le droit d'entrer vit sur le serveur, dans <code>equipe.txt</code>. L'admin la règle depuis l'appli, écran Équipe, ou en ligne de commande."
 
 grille "$DOCS/schemas/dedans.png" 3 \
   "sync_alt|Le protocole|<code>internal/noise</code> et <code>internal/tunnel</code> : poignée de main Noise IK, identique octet pour octet au vecteur officiel, puis ChaCha20-Poly1305, renouvelé toutes les deux minutes." \

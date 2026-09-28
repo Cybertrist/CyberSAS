@@ -159,6 +159,15 @@ class MainActivity : FlutterFragmentActivity() {
                     val cle = appel.argument<String>("cle") ?: ""
                     enArriere(reponse) { Pont.retirer(dossier.path, cle); null }
                 }
+                // Admin : l'équipe (equipe.txt du serveur). Groupe vide : la
+                // personne sort de l'équipe. L'empreinte est demandée avant,
+                // côté Flutter.
+                "equipe" -> enArriere(reponse) { Pont.equipe(dossier.path) }
+                "changerMembre" -> {
+                    val adresse = appel.argument<String>("adresse") ?: ""
+                    val groupe = appel.argument<String>("groupe") ?: ""
+                    enArriere(reponse) { Pont.changerMembre(dossier.path, adresse, groupe) }
+                }
                 "arreter" -> {
                     startService(Intent(this, TunnelService::class.java).setAction(TunnelService.ARRET))
                     reponse.success(null)

@@ -332,6 +332,23 @@ class CodeInvitation {
   }
 }
 
+/// Une personne de l'équipe : un compte Google et son groupe, « admins »
+/// ou « equipe », comme une ligne de equipe.txt sur le serveur.
+class Membre {
+  const Membre({required this.adresse, required this.groupe, this.moi = false});
+  final String adresse;
+  final String groupe;
+
+  /// C'est le compte de ce téléphone : l'admin ne change pas son propre
+  /// accès, un autre admin doit le faire.
+  final bool moi;
+
+  bool get admin => groupe == 'admins';
+
+  /// Même règle que « sas.sh membre » et le serveur.
+  static bool adresseValide(String a) => a.length <= 254 && RegExp(r'^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]+$').hasMatch(a);
+}
+
 /// L'état de l'appli, partagé par tous les écrans.
 class Reseau extends ChangeNotifier {
   /// Le réseau d'exemple (démo, captures d'écran).
@@ -878,6 +895,71 @@ class Reseau extends ChangeNotifier {
       }
     }
     appareils.removeWhere((x) => x.adresse == a.adresse);
+    notifyListeners();
+    return null;
+  }
+
+  // ─── L'équipe, pour l'admin ───
+
+  /// L'équipe telle que le serveur la tient (equipe.txt). Dans la démo,
+  /// une équipe inventée.
+  final membres = <Membre>[
+    const Membre(adresse: 'tristan@gmail.com', groupe: 'admins', moi: true),
+    const Membre(adresse: 'ana.roux@gmail.com', groupe: 'admins'),
+    const Membre(adresse: 'lea.martin@gmail.com', groupe: 'equipe'),
+    const Membre(adresse: 'hugo.petit@gmail.com', groupe: 'equipe'),
+  ];
+
+  /// Relit l'équipe sur le serveur. Rend l'erreur à afficher, ou null.
+  Future<String?> lireEquipe() async {
+    if (!reel) return null;
+    try {
+      _adopterEquipe(await Moteur.equipe());
+    } on ErreurMoteur catch (e) {
+      return e.message;
+    }
+    return null;
+  }
+
+  void _adopterEquipe(List<Map<String, dynamic>> liste) {
+    membres
+      ..clear()
+      ..addAll([
+        for (final m in liste)
+          Membre(adresse: m['adresse'] as String? ?? '?', groupe: m['groupe'] as String? ?? '', moi: m['moi'] == true),
+      ]);
+    notifyListeners();
+  }
+
+  /// Met [adresse] dans [groupe] (« admins » ou « equipe ») : elle entre
+  /// dans l'équipe, ou change de groupe. [groupe] vide : elle en sort, et
+  /// ses appareils sont coupés. Le serveur refuse qu'on change son propre
+  /// accès ou qu'on retire le dernier admin ; la démo fait de même. Rend
+  /// l'erreur à afficher, ou null.
+  Future<String?> changerMembre(String adresse, String groupe) async {
+    final a = adresse.trim().toLowerCase();
+    if (!Membre.adresseValide(a)) return 'Adresse invalide';
+    if (reel) {
+      try {
+        _adopterEquipe(await Moteur.changerMembre(a, groupe));
+      } on ErreurMoteur catch (e) {
+        return e.message;
+      }
+      return null;
+    }
+    final i = membres.indexWhere((m) => m.adresse == a);
+    if (i >= 0 && membres[i].moi) return "On ne change pas son propre accès : un autre admin doit le faire";
+    if (i >= 0 && membres[i].admin && groupe != 'admins' && membres.where((m) => m.admin).length <= 1) {
+      return "C'est le dernier admin : nommer d'abord un autre admin";
+    }
+    if (groupe.isEmpty) {
+      if (i < 0) return "$a n'est pas dans l'équipe";
+      membres.removeAt(i);
+    } else if (i >= 0) {
+      membres[i] = Membre(adresse: a, groupe: groupe);
+    } else {
+      membres.add(Membre(adresse: a, groupe: groupe));
+    }
     notifyListeners();
     return null;
   }

@@ -7,7 +7,9 @@ import '../etat.dart';
 import '../icones.dart';
 import '../securite.dart';
 import '../theme.dart';
+import 'appareils.dart';
 import 'detail.dart';
+import 'equipe.dart';
 
 /// Le compte, cet appareil, la sécurité de l'appli, le réseau. Pas de
 /// « VPN toujours actif » ni de démarrage automatique : le tunnel s'allume
@@ -354,6 +356,15 @@ class _Reseau extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Groupe(titre: 'Réseau', enfants: [
+        // L'équipe (equipe.txt du serveur), pour l'admin seulement.
+        if (r.admin)
+          LigneReglage(
+            ico: Ico.equipe,
+            libelle: 'Équipe',
+            fin: const Chevron(),
+            onTap: () => Navigator.of(context).push(versEcran(const EcranEquipe())),
+            dense: true,
+          ),
         LigneReglage(ico: Ico.serveurLigne, libelle: 'Serveur', valeur: r.serveur, dense: true),
         LigneReglage(ico: Ico.globe, libelle: 'Plage', valeur: r.plage, valeurMono: true, dense: true),
         LigneReglage(ico: Ico.cadenas, libelle: 'Chiffrement', valeur: r.protocole, dense: true),

@@ -9,6 +9,7 @@ import 'package:cybersas/donnees.dart';
 import 'package:cybersas/ecrans/ajout.dart';
 import 'package:cybersas/ecrans/demandes.dart';
 import 'package:cybersas/ecrans/detail.dart';
+import 'package:cybersas/ecrans/equipe.dart';
 import 'package:cybersas/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -86,6 +87,7 @@ void main() {
     ('detail', const EcranDetail(adresse: '10.77.0.2') as Widget),
     ('ajout', const EcranAjout()),
     ('demandes', const EcranDemandes()),
+    ('equipe', const EcranEquipe()),
   ]) {
     for (final f in ['telephone', 'fold-exterieur']) {
       testWidgets('$f $nom', (t) async {
@@ -97,6 +99,27 @@ void main() {
         await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/$f-$nom.png'));
       });
     }
+  }
+
+  // L'équipe : sur le Fold déplié, et ses deux fenêtres (ajouter, la
+  // fiche d'un membre) sur le téléphone.
+  testWidgets('fold-deplie-paysage equipe', (t) async {
+    addTearDown(t.view.reset);
+    await _ouvrir(t, _formats['fold-deplie-paysage']!, Reseau(inscrit: true));
+    t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranEquipe()));
+    await _attendre(t, 800);
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/fold-deplie-paysage-equipe.png'));
+  });
+  for (final (nom, bouton) in [('equipe-ajout', 'Ajouter un membre'), ('equipe-membre', 'lea.martin@gmail.com')]) {
+    testWidgets('telephone $nom', (t) async {
+      addTearDown(t.view.reset);
+      await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
+      t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranEquipe()));
+      await _attendre(t, 800);
+      await t.tap(find.text(bouton));
+      await _attendre(t, 800);
+      await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-$nom.png'));
+    });
   }
 
   // L'interrupteur bloqué pendant que le tunnel s'éteint.

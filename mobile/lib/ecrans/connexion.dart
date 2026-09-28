@@ -127,7 +127,8 @@ class _EcranConnexionState extends State<EcranConnexion> {
                       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                         const _Logo(),
                         const SizedBox(height: 20),
-                        const Center(child: Marque(taille: 38)),
+                        // Le logo ne dépasse jamais la largeur, même en grande police.
+                        const Center(child: FittedBox(fit: BoxFit.scaleDown, child: Marque(taille: 38))),
                         const SizedBox(height: 10),
                         Text('Relie tes appareils entre eux, chiffré de bout en bout.',
                             textAlign: TextAlign.center, style: texte(13.5, couleur: Couleurs.secondaire)),
@@ -380,7 +381,10 @@ class _BoutonGoogle extends StatelessWidget {
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 SvgPicture.string(logoGoogle, width: 20, height: 20),
                 const SizedBox(width: 12),
-                Text(libelle, style: texte(16, graisse: 600, couleur: Couleurs.fond)),
+                Flexible(
+                  child: Text(libelle,
+                      style: texte(16, graisse: 600, couleur: Couleurs.fond), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
               ]),
             ),
           ),

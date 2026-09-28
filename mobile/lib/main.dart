@@ -53,7 +53,22 @@ class CyberSAS extends StatelessWidget {
           // Le verrou passe au-dessus de tout, fenêtres comprises : une fenêtre
           // ouverte (l'import de la clé) reste en dessous et se retrouve après
           // l'empreinte.
-          builder: (context, enfant) => _Garde(child: enfant!),
+          //
+          // La police du téléphone est suivie jusqu'à 1,5 fois sa taille. Les
+          // écrans tiennent sans défiler sur 360 dp de large : au-delà, les
+          // libellés des lignes (« Adresse », « Certificat ») ne gardent que
+          // deux lettres et l'accueil ne montre plus que sa carte. Android 14
+          // réduit déjà le grossissement des grands textes (titres, logo) ;
+          // 1,5 laisse les textes courants bien plus gros qu'à 1.
+          //
+          // Le rattrapage rend aux petits boutons (le retour, le crayon) les
+          // touchers tombés juste à côté : 48 dp de cible, sans les grossir.
+          builder: (context, enfant) => RattrapageTactile(
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.5,
+              child: _Garde(child: enfant!),
+            ),
+          ),
           home: const _Racine(),
         ),
       );
@@ -400,8 +415,14 @@ class _Bouton extends StatelessWidget {
           ),
         ),
     ]);
-    final libelle = Text(o.$2,
-        style: texte(12, graisse: actif ? 600 : 500, couleur: actif ? Couleurs.texte : Couleurs.secondaire));
+    // Le libellé grandit avec la police du téléphone, jusqu'à 1,3 fois :
+    // au-delà, il sortirait de la barre de 66 dp. L'icône et le lecteur
+    // d'écran disent le reste.
+    final libelle = MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.3,
+      child: Text(o.$2,
+          style: texte(12, graisse: actif ? 600 : 500, couleur: actif ? Couleurs.texte : Couleurs.secondaire)),
+    );
     final fond = BoxDecoration(
       color: actif ? Couleurs.cyan.withValues(alpha: 0.12) : Couleurs.cyan.withValues(alpha: 0),
       borderRadius: BorderRadius.circular(16),

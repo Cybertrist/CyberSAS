@@ -2,6 +2,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'donnees.dart';
 import 'icones.dart';
@@ -26,6 +27,138 @@ class Marque extends StatelessWidget {
     maxLines: 1,
     softWrap: false,
   );
+}
+
+/// Une cible tactile d'au moins 48 × 48 dp, comme le demande Android, sans
+/// rien changer au dessin ni à la mise en page : la zone qui répond au
+/// doigt (et que voit le lecteur d'écran) déborde autour de l'enfant, dans
+/// les marges, au lieu de l'agrandir. Un toucher dans ce débord est rendu
+/// au bord de l'enfant le plus proche. Quand un parent plus petit que la
+/// zone (un Align, une ligne) arrête le toucher avant elle,
+/// [RattrapageTactile] le lui rend.
+class ZoneTactile extends SingleChildRenderObjectWidget {
+  const ZoneTactile({super.key, required Widget super.child, this.minimum = 48});
+  final double minimum;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenduZoneTactile(minimum);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) => (renderObject as _RenduZoneTactile).minimum = minimum;
+}
+
+class _RenduZoneTactile extends RenderProxyBox {
+  _RenduZoneTactile(this._minimum);
+  double _minimum;
+  set minimum(double v) {
+    if (v == _minimum) return;
+    _minimum = v;
+    markNeedsSemanticsUpdate();
+  }
+
+  /// Les zones à l'écran, pour [RattrapageTactile].
+  static final _posees = <_RenduZoneTactile>{};
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _posees.add(this);
+  }
+
+  @override
+  void detach() {
+    _posees.remove(this);
+    super.detach();
+  }
+
+  /// L'enfant, agrandi de ce qui lui manque pour faire [_minimum] de côté.
+  Rect get _zone {
+    final dx = ((_minimum - size.width) / 2).clamp(0.0, _minimum);
+    final dy = ((_minimum - size.height) / 2).clamp(0.0, _minimum);
+    return Rect.fromLTRB(-dx, -dy, size.width + dx, size.height + dy);
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (child == null || !_zone.contains(position)) return false;
+    final dedans = Offset(position.dx.clamp(0.0, size.width - 0.01), position.dy.clamp(0.0, size.height - 0.01));
+    if (!child!.hitTest(result, position: dedans)) return false;
+    result.add(BoxHitTestEntry(this, position));
+    return true;
+  }
+
+  @override
+  Rect get semanticBounds => _zone;
+
+  // Un seul nœud pour le lecteur d'écran, à la taille de la zone : le
+  // bouton, son libellé et son action.
+  @override
+  void describeSemanticsConfiguration(SemanticsConfiguration config) {
+    super.describeSemanticsConfiguration(config);
+    config
+      ..isSemanticBoundary = true
+      ..isMergingSemanticsOfDescendants = true;
+  }
+}
+
+/// Posé une fois autour de l'appli : un toucher qui tombe dans le débord
+/// d'une [ZoneTactile] sans rien toucher d'autre (le fond, une marge) va à
+/// cette zone. Ce qui se touche déjà (un autre bouton, une ligne, un champ)
+/// garde la priorité ; entre deux zones, la plus proche l'emporte.
+class RattrapageTactile extends SingleChildRenderObjectWidget {
+  const RattrapageTactile({super.key, required Widget super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenduRattrapage();
+}
+
+class _RenduRattrapage extends RenderProxyBox {
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final enfant = child;
+    if (enfant == null) return false;
+    final essai = BoxHitTestResult();
+    enfant.hitTest(essai, position: position);
+    final zone = _touchable(essai) ? null : _zoneSous(enfant, position);
+    if (zone != null) {
+      result.addWithPaintTransform(
+        transform: zone.getTransformTo(this),
+        position: position,
+        hitTest: (r, p) => zone.hitTest(r, position: p),
+      );
+    }
+    // Le reste du chemin suit : un défilement qui part du débord défile.
+    return enfant.hitTest(result, position: position) || zone != null;
+  }
+
+  static bool _touchable(HitTestResult r) => r.path.any((e) {
+    final c = e.target;
+    return c is _RenduZoneTactile || c is RenderEditable || (c is RenderSemanticsGestureHandler && (c.onTap != null || c.onLongPress != null));
+  });
+
+  /// La zone dont le débord contient [position], si elle est bien à l'écran
+  /// et touchable (pas sous une fenêtre, pas dans un onglet caché).
+  _RenduZoneTactile? _zoneSous(RenderBox enfant, Offset position) {
+    _RenduZoneTactile? choisie;
+    var ecart = double.infinity;
+    for (final z in _RenduZoneTactile._posees) {
+      if (!z.attached || !z.hasSize || z.child == null || z.owner != owner) continue;
+      final versIci = z.getTransformTo(this);
+      final inverse = Matrix4.tryInvert(versIci);
+      if (inverse == null) continue;
+      final local = MatrixUtils.transformPoint(inverse, position);
+      if (!z._zone.contains(local)) continue;
+      final bord = Offset(local.dx.clamp(0.0, z.size.width), local.dy.clamp(0.0, z.size.height));
+      final d = (local - bord).distance;
+      if (d >= ecart) continue;
+      final verif = BoxHitTestResult();
+      enfant.hitTest(verif, position: MatrixUtils.transformPoint(versIci, z.size.center(Offset.zero)));
+      if (!verif.path.any((e) => e.target == z)) continue;
+      choisie = z;
+      ecart = d;
+    }
+    return choisie;
+  }
 }
 
 /// Une boîte au fond sombre et à la bordure d'1 dp en dégradé
@@ -54,7 +187,7 @@ class Bordee extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = BorderRadius.circular(rayon);
-    return Container(
+    final boite = Container(
       decoration: BoxDecoration(borderRadius: r, gradient: bordure, boxShadow: halo),
       padding: EdgeInsets.all(largeur),
       child: Material(
@@ -69,6 +202,7 @@ class Bordee extends StatelessWidget {
         ),
       ),
     );
+    return onTap == null ? boite : ZoneTactile(child: boite);
   }
 }
 
@@ -114,20 +248,23 @@ class Carte extends StatelessWidget {
   final Color bord;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: fond,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(rayon),
-      side: BorderSide(color: bord),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      splashColor: Couleurs.cyan.withValues(alpha: 0.08),
-      highlightColor: Couleurs.cyan.withValues(alpha: 0.04),
-      child: Padding(padding: padding, child: child),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final carte = Material(
+      color: fond,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(rayon),
+        side: BorderSide(color: bord),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: Couleurs.cyan.withValues(alpha: 0.08),
+        highlightColor: Couleurs.cyan.withValues(alpha: 0.04),
+        child: Padding(padding: padding, child: child),
+      ),
+    );
+    return onTap == null ? carte : ZoneTactile(child: carte);
+  }
 }
 
 /// Une étiquette mono en capitales.
@@ -241,7 +378,7 @@ class Avatar extends StatelessWidget {
             ),
           );
     if (onTap == null) return rond;
-    return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: rond);
+    return ZoneTactile(child: GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: rond));
   }
 }
 
@@ -446,23 +583,25 @@ class BoutonRetour extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Couleurs.carte,
-    shape: const StadiumBorder(side: BorderSide(color: Couleurs.bordure)),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap ?? () => Navigator.of(context).maybePop(),
-      child: SizedBox(
-        height: 38,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(9, 0, 15, 0),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icone(Ico.retour, taille: 17, trait: 2),
-              const SizedBox(width: 6),
-              Text(libelle, style: texte(14)),
-            ],
+  Widget build(BuildContext context) => ZoneTactile(
+    child: Material(
+      color: Couleurs.carte,
+      shape: const StadiumBorder(side: BorderSide(color: Couleurs.bordure)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap ?? () => Navigator.of(context).maybePop(),
+        child: SizedBox(
+          height: 38,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(9, 0, 15, 0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icone(Ico.retour, taille: 17, trait: 2),
+                const SizedBox(width: 6),
+                Text(libelle, style: texte(14)),
+              ],
+            ),
           ),
         ),
       ),
@@ -494,44 +633,46 @@ class Interrupteur extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = hauteur - 6;
     final bloque = onChanged == null;
-    return Semantics(
-      toggled: valeur,
-      enabled: !bloque,
-      label: libelle,
-      child: GestureDetector(
-        onTap: bloque ? null : () => onChanged!(!valeur),
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: bloque ? 0.45 : 1,
-          child: Padding(
-            padding: const EdgeInsets.all(6),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
-              width: largeur,
-              height: hauteur,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(hauteur / 2),
-                gradient: valeur ? Couleurs.degrade : const LinearGradient(colors: [Couleurs.separateur, Couleurs.separateur]),
-                border: Border.all(color: valeur ? Colors.transparent : Couleurs.bordure),
-                boxShadow: valeur
-                    ? [BoxShadow(color: Couleurs.cyan.withValues(alpha: 0.65), blurRadius: 18, spreadRadius: -2)]
-                    : const [],
-              ),
-              child: AnimatedAlign(
+    return ZoneTactile(
+      child: Semantics(
+        toggled: valeur,
+        enabled: !bloque,
+        label: libelle,
+        child: GestureDetector(
+          onTap: bloque ? null : () => onChanged!(!valeur),
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: bloque ? 0.45 : 1,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: AnimatedContainer(
                 duration: const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
-                alignment: valeur ? Alignment.centerRight : Alignment.centerLeft,
-                child: AnimatedContainer(
+                width: largeur,
+                height: hauteur,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(hauteur / 2),
+                  gradient: valeur ? Couleurs.degrade : const LinearGradient(colors: [Couleurs.separateur, Couleurs.separateur]),
+                  border: Border.all(color: valeur ? Colors.transparent : Couleurs.bordure),
+                  boxShadow: valeur
+                      ? [BoxShadow(color: Couleurs.cyan.withValues(alpha: 0.65), blurRadius: 18, spreadRadius: -2)]
+                      : const [],
+                ),
+                child: AnimatedAlign(
                   duration: const Duration(milliseconds: 260),
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  width: d,
-                  height: d,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: valeur ? Couleurs.texte : Couleurs.tertiaire,
-                    boxShadow: valeur ? [const BoxShadow(color: Color(0x80001E32), blurRadius: 5, offset: Offset(0, 1))] : null,
+                  curve: Curves.easeOutCubic,
+                  alignment: valeur ? Alignment.centerRight : Alignment.centerLeft,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 260),
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    width: d,
+                    height: d,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: valeur ? Couleurs.texte : Couleurs.tertiaire,
+                      boxShadow: valeur ? [const BoxShadow(color: Color(0x80001E32), blurRadius: 5, offset: Offset(0, 1))] : null,
+                    ),
                   ),
                 ),
               ),
@@ -717,7 +858,9 @@ class Coins extends CustomPainter {
 }
 
 /// Tout doit tenir dans la hauteur visible : si le contenu déborde (petit
-/// écran, grande police), il est réduit au lieu de défiler.
+/// écran), il est réduit au lieu de défiler. Avec une police agrandie dans
+/// les réglages du téléphone, il défile : le réduire annulerait le choix
+/// de la personne, et rapetisserait les boutons sous 48 dp.
 class SansDefilement extends StatefulWidget {
   const SansDefilement({super.key, required this.child, this.alignement = Alignment.topCenter});
   final Widget child;
@@ -736,7 +879,8 @@ class _SansDefilementState extends State<SansDefilement> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, c) {
       final contenu = SizedBox(width: c.maxWidth, child: KeyedSubtree(key: _contenu, child: widget.child));
-      return View.of(context).viewInsets.bottom > 0
+      final grandePolice = MediaQuery.textScalerOf(context).scale(10) > 10;
+      return View.of(context).viewInsets.bottom > 0 || grandePolice
           // Clavier ouvert, la hauteur fond : réduire rendrait tout
           // minuscule. On défile, à taille normale.
           ? SingleChildScrollView(child: contenu)

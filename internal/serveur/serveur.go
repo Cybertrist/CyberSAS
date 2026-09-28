@@ -243,6 +243,13 @@ func (s *Serveur) Synchroniser() error {
 	numeros := map[netip.Addr]uint32{}
 	noms := map[string]netip.Addr{}
 	var sig strings.Builder
+	// Avec un verrou, le groupe d'un appareil est aussi celui de son
+	// certificat, comme pour estAdmin : equipe.txt, que le serveur peut
+	// réécrire, dit qui est encore membre et dans quel groupe, mais un
+	// appareil ne compte dans « groupe:admins » que si l'admin l'a signé
+	// pour ce groupe-là. Un serveur piraté qui promeut quelqu'un dans
+	// equipe.txt n'ouvre donc pas de relais de plus.
+	cleVerrou, _ := s.verrou()
 	for _, a := range gardes {
 		cle, err := b64.Decoder(a.ClePublique)
 		if err != nil || len(cle) != 32 {
@@ -254,7 +261,9 @@ func (s *Serveur) Synchroniser() error {
 		// serveur lui-même passe par le pare-feu du noyau.
 		pairs = append(pairs, tunnel.Pair{Publique: pub, Adresses: []netip.Prefix{netip.PrefixFrom(a.Adresse, 32)},
 			Numero: uint32(a.ID), ToutEntrant: true}) // #nosec G115 -- borné par base.Enregistrer
-		apps = append(apps, politique.Appareil{Adresse: a.Adresse, Proprietaire: a.Proprietaire, Etiquette: a.Etiquette})
+		horsGroupe := cleVerrou != nil && a.Proprietaire != "" && groupeCertifie(a, now) != equipe[a.Proprietaire]
+		apps = append(apps, politique.Appareil{Adresse: a.Adresse, Proprietaire: a.Proprietaire, Etiquette: a.Etiquette,
+			HorsGroupe: horsGroupe})
 		numeros[a.Adresse] = uint32(a.ID) // #nosec G115 -- borné par base.Enregistrer
 		noms[a.Nom] = a.Adresse
 		fmt.Fprintf(&sig, "%d %s %s %s %s %s|", a.ID, a.Nom, a.ClePublique, a.Adresse, a.Proprietaire, a.Etiquette)
@@ -266,6 +275,11 @@ func (s *Serveur) Synchroniser() error {
 	flux := pol.Compiler(equipe, apps, s.cfg.Serveur)
 	regles := politique.Nft(flux, s.cfg.Interface, s.cfg.Serveur, s.cfg.Reseau)
 	sig.WriteString(regles)
+	// Les flux aussi : ceux d'appareil à appareil ne passent pas par le
+	// pare-feu du serveur (ils sont relayés chiffrés), et n'ont donc pas de
+	// règle nft. Sans eux, un certificat qui expire ou un groupe qui change
+	// ne mettrait pas à jour les relations du relais.
+	fmt.Fprintf(&sig, "%v", flux)
 	if sig.String() == s.signature {
 		return nil
 	}

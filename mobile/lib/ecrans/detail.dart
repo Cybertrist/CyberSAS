@@ -419,7 +419,7 @@ class _BoutonOuvrir extends StatelessWidget {
             ok = false;
           }
           if (!ok && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible d\'ouvrir ${a.nomInterne}')));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible d\'ouvrir ${a.web}')));
           }
         },
       );

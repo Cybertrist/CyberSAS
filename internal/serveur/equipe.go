@@ -4,9 +4,11 @@ import (
 	"cmp"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -24,6 +26,10 @@ import (
 // et un serveur piraté pourrait déjà le changer. Avec un verrou, entrer
 // dans l'équipe ne suffit toujours pas : chaque appareil doit encore être
 // signé sur le téléphone de l'admin, pour le groupe qu'il voit.
+
+// fichierVerrouEquipe : le verrou de fichier commun à sasd et à sas.sh,
+// dans le dossier de l'équipe (voir verrouillerEquipe).
+const fichierVerrouEquipe = ".verrou"
 
 // adresseMembre : la même règle que « sas.sh membre ».
 var adresseMembre = regexp.MustCompile(`^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]+$`)
@@ -99,6 +105,32 @@ func emailsWeb(e politique.Equipe) []byte {
 	return []byte(b.String())
 }
 
+// enregistrerEquipe écrit la nouvelle équipe, puis la liste des services
+// web qui en découle. equipe.txt d'abord : c'est la liste qui fait foi,
+// et sasd la relit toutes les cinq secondes. Si la liste web échoue
+// ensuite, l'ancien equipe.txt (avant) est remis : les deux fichiers ne
+// restent jamais en désaccord, où une personne retirée du VPN garderait
+// les pages web.
+//
+// Lisibles par l'utilisateur de sas.sh et par oauth2-proxy, qui ne sont
+// pas root : 0644. Le dossier etat/ reste fermé aux autres.
+func (s *Serveur) enregistrerEquipe(avant []byte, texte string, nouvelle politique.Equipe) error {
+	if err := ecrireAtomiqueMode(s.cfg.Equipe, []byte(texte), 0o644); err != nil {
+		return err
+	}
+	if s.cfg.EquipeWeb == "" {
+		return nil
+	}
+	err := ecrireAtomiqueMode(s.cfg.EquipeWeb, emailsWeb(nouvelle), 0o644)
+	if err == nil {
+		return nil
+	}
+	if e := ecrireAtomiqueMode(s.cfg.Equipe, avant, 0o644); e != nil {
+		return fmt.Errorf("liste web : %w ; et l'ancienne équipe n'a pas pu être remise : %w", err, e)
+	}
+	return fmt.Errorf("liste web : %w (ancienne équipe remise)", err)
+}
+
 // refusChangement : pourquoi moi ne peut pas mettre adresse dans ce
 // groupe (vide : la retirer), avec le code HTTP ; 0 si rien ne s'y oppose.
 // Tout est vérifié sur l'équipe relue sous muEquipe : deux admins qui se
@@ -158,6 +190,15 @@ func (s *Serveur) membre(w http.ResponseWriter, r *http.Request) {
 	}
 	s.muEquipe.Lock()
 	defer s.muEquipe.Unlock()
+	// muEquipe tient les autres demandes ; le verrou de fichier tient
+	// sas.sh, qui réécrit le même fichier depuis l'hôte.
+	liberer, err := verrouillerEquipe(filepath.Dir(s.cfg.Equipe))
+	if err != nil {
+		s.journal.Error("équipe occupée", "evenement", "equipe", "erreur", err)
+		refuser(w, http.StatusServiceUnavailable, "équipe en cours de modification, réessayer")
+		return
+	}
+	defer liberer()
 	// On relit le fichier lui-même, pas la dernière version gardée : une
 	// équipe illisible ne doit pas être réécrite à partir d'un souvenir.
 	brut, err := os.ReadFile(s.cfg.Equipe)
@@ -187,17 +228,7 @@ func (s *Serveur) membre(w http.ResponseWriter, r *http.Request) {
 		refuser(w, http.StatusInternalServerError, "équipe non enregistrée")
 		return
 	}
-	// Lisibles par l'utilisateur de sas.sh et par oauth2-proxy, qui ne
-	// sont pas root : 0644. Le dossier etat/ reste fermé aux autres.
-	// La liste des services web d'abord : si elle échoue, rien n'a changé.
-	if s.cfg.EquipeWeb != "" {
-		if err := ecrireAtomiqueMode(s.cfg.EquipeWeb, emailsWeb(nouvelle), 0o644); err != nil {
-			s.journal.Error("liste web non enregistrée", "evenement", "equipe", "erreur", err)
-			refuser(w, http.StatusInternalServerError, "équipe non enregistrée")
-			return
-		}
-	}
-	if err := ecrireAtomiqueMode(s.cfg.Equipe, []byte(texte), 0o644); err != nil {
+	if err := s.enregistrerEquipe(brut, texte, nouvelle); err != nil {
 		s.journal.Error("équipe non enregistrée", "evenement", "equipe", "erreur", err)
 		refuser(w, http.StatusInternalServerError, "équipe non enregistrée")
 		return

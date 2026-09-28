@@ -79,7 +79,13 @@ services:
     # oauth2-proxy). Il écrit à côté puis renomme, d'où le dossier. Le
     # root du conteneur n'a pas DAC_OVERRIDE : sas.sh ouvre ce dossier-là
     # en écriture à « autres » (0733), et etat/, en 0700, le ferme aux
-    # autres comptes de l'hôte.
+    # autres comptes de l'hôte. En retour, sas.sh traite tout ce qui s'y
+    # trouve comme venant peut-être d'un sasd piraté : pas de lien
+    # symbolique suivi, rien écrit en place, et un verrou de fichier
+    # (.verrou) que les deux prennent avant de réécrire l'équipe (voir
+    # dossier_equipe dans sas.sh). Plus fermé encore : le remappage des
+    # utilisateurs de Docker (userns-remap), pour que le root de sasd soit
+    # un uid de l'hôte à lui seul, et ce dossier ouvert à son groupe.
     volumes:
       - sasd:/var/lib/sasd
       - ./etat/sasd:/config:ro

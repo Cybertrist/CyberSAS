@@ -13,7 +13,7 @@ Appareil _pair(String nom, {List<String>? ports, String etiquette = '', bool moi
       'systeme': etiquette.isEmpty ? 'android' : '',
       'moi': moi,
       'signe': true,
-      if (ports != null) 'ports': ports,
+      'ports': ?ports,
     }, portsConnus: connus);
 
 void main() {

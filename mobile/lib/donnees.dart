@@ -14,6 +14,33 @@ import 'icones.dart';
 import 'moteur.dart';
 import 'theme.dart';
 
+/// Une adresse IPv4 écrite en toutes lettres (« 10.77.0.2 », sans zéro en
+/// tête ni rien autour), en entier sur 32 bits ; null sinon.
+int? _ipv4(String s) {
+  final octets = s.split('.');
+  if (octets.length != 4) return null;
+  var n = 0;
+  for (final o in octets) {
+    if (!RegExp(r'^(0|[1-9][0-9]{0,2})$').hasMatch(o)) return null;
+    final v = int.parse(o);
+    if (v > 255) return null;
+    n = n * 256 + v;
+  }
+  return n;
+}
+
+/// L'adresse est une IPv4 de la plage (« 10.77.0.0/24 »), sans être
+/// l'adresse du réseau ni celle de diffusion.
+bool dansPlage(String adresse, String plage) {
+  final morceaux = plage.split('/');
+  if (morceaux.length != 2) return false;
+  final a = _ipv4(adresse), base = _ipv4(morceaux[0]), taille = int.tryParse(morceaux[1]);
+  if (a == null || base == null || taille == null || taille < 8 || taille > 30) return false;
+  final masque = (0xFFFFFFFF << (32 - taille)) & 0xFFFFFFFF;
+  final hote = a & ~masque & 0xFFFFFFFF;
+  return a & masque == base & masque && hote != 0 && hote != ~masque & 0xFFFFFFFF;
+}
+
 enum TypeAppareil {
   serveur('Serveur', Ico.serveur),
   maison('Serveur maison', Ico.maison),
@@ -70,7 +97,12 @@ class Appareil {
     this.libelle = '',
     this.cle = '',
     this.groupe = '',
+    this.reseau = '10.77.0.0/24',
   });
+
+  /// La plage du VPN (« 10.77.0.0/24 ») : le bouton du navigateur n'ouvre
+  /// qu'une adresse qui en fait partie.
+  final String reseau;
 
   /// Son groupe dans l'équipe, tel que le verrou l'a signé (« admins »).
   final String groupe;
@@ -133,12 +165,18 @@ class Appareil {
   /// dans le tunnel, le trafic est déjà chiffré de bout en bout. « * »
   /// seul ne suffit que pour une machine : un téléphone ou un PC ouvert à
   /// l'admin ne sert pas de page pour autant.
+  ///
+  /// On ouvre l'adresse IP, jamais le nom : le nom vient du serveur, sans
+  /// signature, et un serveur piraté qui renommerait un pair
+  /// « evil.example/p? » enverrait le navigateur hors du tunnel. L'adresse,
+  /// elle, est dans le certificat que le moteur a vérifié, et doit tomber
+  /// dans la plage du VPN.
   Uri? get web {
-    if (moi || type == TypeAppareil.serveur || !signe) return null;
+    if (moi || type == TypeAppareil.serveur || !signe || !dansPlage(adresse, reseau)) return null;
     final explicite = ports.any((p) => p.startsWith('tcp:'));
     if (toutOuvert && !explicite && type != TypeAppareil.maison) return null;
-    if (ouvert(80)) return Uri.parse('http://$nomInterne');
-    if (ouvert(443)) return Uri.parse('https://$nomInterne');
+    if (ouvert(80)) return Uri(scheme: 'http', host: adresse);
+    if (ouvert(443)) return Uri(scheme: 'https', host: adresse);
     return null;
   }
 
@@ -182,6 +220,7 @@ class Appareil {
         libelle: l,
         cle: cle,
         groupe: groupe,
+        reseau: reseau,
       );
 
   Appareil renomme(String nouveau) => Appareil(
@@ -200,10 +239,11 @@ class Appareil {
         libelle: libelle,
         cle: cle,
         groupe: groupe,
+        reseau: reseau,
       );
 
   /// Un appareil tel que le moteur le décrit (pont.Pair).
-  factory Appareil.duMoteur(Map<String, dynamic> j, {bool portsConnus = false}) {
+  factory Appareil.duMoteur(Map<String, dynamic> j, {bool portsConnus = false, String reseau = '10.77.0.0/24'}) {
     final etiquette = j['etiquette'] as String? ?? '';
     final systeme = j['systeme'] as String? ?? '';
     final serveur = j['serveur'] == true;
@@ -230,6 +270,7 @@ class Appareil {
       libelle: j['libelle'] as String? ?? '',
       cle: j['cle'] as String? ?? '',
       groupe: j['groupe'] as String? ?? '',
+      reseau: reseau,
       // Même règle que NomPersonnel côté serveur.
       suffixeReseau: email.isEmpty || serveur || etiquette.isNotEmpty ? '' : '-${nomPropre(email.split('@').first)}',
       certificat: Certificat(
@@ -748,7 +789,7 @@ class Reseau extends ChangeNotifier {
     if (pairs.isNotEmpty) {
       appareils
         ..clear()
-        ..addAll(pairs.map((p) => Appareil.duMoteur(p, portsConnus: portsConnus)));
+        ..addAll(pairs.map((p) => Appareil.duMoteur(p, portsConnus: portsConnus, reseau: plage)));
       if (!appareils.any((a) => a.nom == selection)) selection = appareils.first.nom;
       // Admin : d'après le groupe que le verrou a signé pour cet appareil.
       final m = appareils.where((a) => a.moi);

@@ -56,6 +56,12 @@ type Config struct {
 	// lecture seule). On sert la plus récente des deux.
 	RevocationsAppli string
 	DureeAppareil    time.Duration
+	// EquipeWeb : la liste des adresses seules, pour oauth2-proxy. Le
+	// serveur la réécrit avec equipe.txt quand l'appli change l'équipe :
+	// une personne retirée perd aussi les services web. Vide : aucune.
+	// Equipe et EquipeWeb sont dans le seul dossier où sasd écrit, hors de
+	// son volume (voir compose.yaml).
+	EquipeWeb string
 }
 
 type Serveur struct {
@@ -84,6 +90,9 @@ type Serveur struct {
 	// avec celle en vigueur jusqu'à son écriture : deux envois simultanés
 	// ne peuvent ni faire reculer la liste, ni mêler leurs octets.
 	muRevocations sync.Mutex
+	// muEquipe tient equipe.txt de sa lecture à sa réécriture : deux
+	// changements simultanés ne s'effacent pas l'un l'autre.
+	muEquipe sync.Mutex
 
 	muRelations sync.RWMutex
 	relations   map[[2]uint32]bool

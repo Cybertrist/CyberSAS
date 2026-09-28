@@ -73,9 +73,17 @@ services:
     # et un fichier remplacé (sas.sh écrit à côté puis renomme) resterait
     # invisible au conteneur. Retirer quelqu'un de l'équipe n'aurait alors
     # aucun effet.
+    #
+    # etat/equipe est le seul dossier de la configuration où sasd écrit :
+    # l'appli de l'admin y change l'équipe (equipe.txt, et emails.txt pour
+    # oauth2-proxy). Il écrit à côté puis renomme, d'où le dossier. Le
+    # root du conteneur n'a pas DAC_OVERRIDE : sas.sh ouvre ce dossier-là
+    # en écriture à « autres » (0733), et etat/, en 0700, le ferme aux
+    # autres comptes de l'hôte.
     volumes:
       - sasd:/var/lib/sasd
       - ./etat/sasd:/config:ro
+      - ./etat/equipe:/equipe
       - ./politique:/politique:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/v1/sante"]
@@ -119,6 +127,7 @@ services:
     read_only: true
     volumes:
       - ./etat/oauth2-proxy:/config:ro
+      - ./etat/equipe:/equipe:ro
       - ./etat/secrets/google:/secrets:ro
     # interne : pour que Nginx le joigne. sortie : pour joindre Google.
     networks: [interne, sortie]

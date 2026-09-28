@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/netip"
 	"os"
 	"slices"
@@ -95,8 +96,14 @@ func ChargerEquipe(chemin string) (Equipe, error) {
 		return nil, err
 	}
 	defer f.Close()
+	return LireEquipe(f)
+}
+
+// LireEquipe : la même lecture, depuis un texte déjà ouvert (le serveur
+// relit ainsi le fichier qu'il s'apprête à réécrire).
+func LireEquipe(r io.Reader) (Equipe, error) {
 	e := Equipe{}
-	s := bufio.NewScanner(f)
+	s := bufio.NewScanner(r)
 	for s.Scan() {
 		ch := strings.Fields(s.Text())
 		if len(ch) >= 2 && !strings.HasPrefix(ch[0], "#") {

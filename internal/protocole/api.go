@@ -33,6 +33,9 @@ const (
 	// qu'il vient de signer sur son téléphone.
 	CheminInvitation  = "/api/v1/invitation"
 	CheminRevocations = "/api/v1/revocations"
+	// CheminEquipe : la liste de l'équipe (GET), et un membre ajouté,
+	// changé de groupe ou retiré (POST). Admins seulement.
+	CheminEquipe = "/api/v1/equipe"
 )
 
 // DemandeLibelle : le nouveau nom affiché. ClePublique désigne un autre
@@ -149,6 +152,21 @@ type DemandeInvitation struct {
 type ReponseInvitation struct {
 	Cle    string    `json:"cle"`
 	Expire time.Time `json:"expire"`
+}
+
+// Membre : une ligne de equipe.txt. Moi : c'est le compte qui demande.
+type Membre struct {
+	Adresse string `json:"adresse"`
+	Groupe  string `json:"groupe"`
+	Moi     bool   `json:"moi,omitempty"`
+}
+
+// DemandeMembre : la personne entre dans ce groupe (admins ou equipe), ou
+// change de groupe. Groupe vide : elle sort de l'équipe, et ses appareils
+// avec elle.
+type DemandeMembre struct {
+	Adresse string `json:"adresse"`
+	Groupe  string `json:"groupe"`
 }
 
 type Erreur struct {

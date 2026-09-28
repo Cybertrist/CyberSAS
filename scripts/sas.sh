@@ -6,6 +6,7 @@
 #   sas.sh google <id>               le client OAuth de Google Cloud (le secret est demandé)
 #   sas.sh membre <email> <groupe>   donne l'accès à un compte Google (admins ou equipe)
 #   sas.sh retirer <email>           le lui retire, et coupe ses appareils
+#                                    (l'admin fait de même depuis l'appli, écran Équipe)
 #   sas.sh invitation <email>        un lien cybersas:// pour que son appareil rejoigne le réseau
 #   sas.sh demarrer                  construit et lance la pile
 #   sas.sh etat                      les appareils du VPN
@@ -22,8 +23,9 @@
 #   sas.sh essai                     vérifie que tout répond comme prévu
 #
 # Tout ce qui est secret ou propre à une installation s'écrit dans etat/,
-# qui n'est jamais versionné. etat/equipe.txt est la seule liste des
-# personnes autorisées : le VPN et les services web la lisent tous deux.
+# qui n'est jamais versionné. etat/equipe/equipe.txt est la seule liste
+# des personnes autorisées : le VPN et les services web la lisent tous
+# deux, et sasd la réécrit quand l'admin change l'équipe depuis l'appli.
 set -euo pipefail
 
 # Tout ce que ce script crée n'est lisible que par son utilisateur : clés,
@@ -40,7 +42,7 @@ RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RACINE"
 # Relatif : openssl sous Git Bash ne lit pas les chemins /c/...
 ETAT="etat"
-EQUIPE="$ETAT/equipe.txt"
+EQUIPE="$ETAT/equipe/equipe.txt"
 GOOGLE="$ETAT/secrets/google"
 VERROU="$ETAT/verrou"
 LABO=(docker compose -f labo/maison.yaml)
@@ -142,18 +144,38 @@ init_verrou () {
   ok "verrou du réseau créé (labo : la clé privée est sur cette machine)"
 }
 
+# Le dossier de l'équipe : le seul de etat/ où sasd écrit, quand l'appli
+# de l'admin change l'équipe (voir compose.yaml). sasd est root dans son
+# conteneur, sans DAC_OVERRIDE : il n'écrit que là où « les autres »
+# peuvent écrire. D'où 0733 (écrire et traverser, pas lister) ; etat/,
+# en 0700, ferme tout de même ce dossier aux autres comptes de l'hôte.
+# Les fichiers qu'il écrit sont en 0644, pour que ce script les relise.
+dossier_equipe () {
+  mkdir -p "$ETAT/equipe"
+  chmod 733 "$ETAT/equipe"
+  # Avant, la liste était dans etat/equipe.txt, recopiée pour sasd : on
+  # la déplace une fois, et l'on efface les anciennes copies.
+  if [ -f "$ETAT/equipe.txt" ] && [ ! -f "$EQUIPE" ]; then mv "$ETAT/equipe.txt" "$EQUIPE"; fi
+  rm -f "$ETAT/sasd/equipe.txt" "$ETAT/oauth2-proxy/emails.txt"
+  # Pas de touch : un fichier réécrit par sasd appartient à root.
+  [ -f "$EQUIPE" ] || : > "$EQUIPE"
+}
+
 # Écrit les configurations de etat/ à partir des modèles et de equipe.txt.
 # sasd relit les siennes toutes les cinq secondes, oauth2-proxy surveille
 # sa liste : aucun redémarrage n'est nécessaire après un changement.
 rendre () {
   mkdir -p "$ETAT/sasd" "$ETAT/oauth2-proxy"
-  touch "$EQUIPE"
+  dossier_equipe
   local id; id="$(cat "$GOOGLE/client_id")"
-  awk 'NF>=2 && $1 !~ /^#/ {print $1}' "$EQUIPE" > "$ETAT/oauth2-proxy/emails.txt.tmp"
-  mv "$ETAT/oauth2-proxy/emails.txt.tmp" "$ETAT/oauth2-proxy/emails.txt"
   # Le poste d'essai du labo s'inscrit avec une clé, sans compte Google.
-  { cat "$EQUIPE"; if [ "$TLS" = labo ]; then echo "essai@labo.local equipe"; fi; } > "$ETAT/sasd/equipe.txt.tmp"
-  mv "$ETAT/sasd/equipe.txt.tmp" "$ETAT/sasd/equipe.txt"
+  # Il est écrit dans la liste elle-même : sasd la réécrit, il ne doit
+  # pas l'y perdre. Toujours à côté puis renommé (voir dossier_equipe).
+  if [ "$TLS" = labo ] && ! grep -q '^essai@labo\.local '"$EQUIPE"; then
+    { cat "$EQUIPE"; echo "essai@labo.local equipe"; } > "$EQUIPE.tmp" && mv "$EQUIPE.tmp" "$EQUIPE"
+  fi
+  awk 'NF>=2 && $1 !~ /^#/ {print $1}' "$EQUIPE" > "$ETAT/equipe/emails.txt.tmp"
+  mv "$ETAT/equipe/emails.txt.tmp" "$ETAT/equipe/emails.txt"
   printf '%s\n' "$id" > "$ETAT/sasd/clients_google"
   cp "$VERROU/publique" "$ETAT/sasd/verrou.pub"
   sed -e "s|@DOMAINE@|$DOMAINE|g" -e "s|@GOOGLE_CLIENT_ID@|$id|g" oauth2-proxy/oauth2-proxy.cfg > "$ETAT/oauth2-proxy/oauth2-proxy.cfg"
@@ -170,6 +192,7 @@ cmd_init () {
   init_secrets
   init_verrou
   dit "Accès"
+  dossier_equipe
   if [ ! -s "$EQUIPE" ] && [ -n "${ADMIN_EMAIL:-}" ]; then
     printf '# adresse Google        groupe (admins ou equipe)\n%s admins\n' "$ADMIN_EMAIL" > "$EQUIPE"
     ok "$ADMIN_EMAIL admin"
@@ -224,7 +247,7 @@ cmd_membre () {
   local mail="${1,,}" groupe="$2"
   case "$groupe" in admins|equipe) ;; *) meurt "groupe inconnu : $groupe (admins ou equipe)";; esac
   [[ "$mail" =~ ^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]+$ ]] || meurt "adresse invalide : $mail"
-  touch "$EQUIPE"
+  dossier_equipe
   awk -v m="$mail" '$1 != m' "$EQUIPE" > "$EQUIPE.tmp" && mv "$EQUIPE.tmp" "$EQUIPE"
   printf '%s %s\n' "$mail" "$groupe" >> "$EQUIPE"
   rendre
@@ -299,7 +322,7 @@ attendre_sasd () {
 
 cmd_demarrer () {
   charger_env
-  [ -f "$ETAT/sasd/equipe.txt" ] || meurt "lancer d'abord : bash scripts/sas.sh init"
+  [ -f "$EQUIPE" ] || [ -f "$ETAT/equipe.txt" ] || meurt "lancer d'abord : bash scripts/sas.sh init"
   rendre
   dit "Construction et démarrage de la pile"
   docker compose build -q

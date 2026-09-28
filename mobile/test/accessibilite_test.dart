@@ -12,6 +12,7 @@ import 'package:cybersas/ecrans/accueil.dart';
 import 'package:cybersas/ecrans/ajout.dart';
 import 'package:cybersas/ecrans/demandes.dart';
 import 'package:cybersas/ecrans/detail.dart';
+import 'package:cybersas/ecrans/equipe.dart';
 import 'package:cybersas/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -87,6 +88,7 @@ void main() {
         ('detail', const EcranDetail(adresse: '10.77.0.2') as Widget),
         ('ajout', const EcranAjout()),
         ('demandes', const EcranDemandes()),
+        ('equipe', const EcranEquipe()),
       ]) {
         testWidgets('${f.key} x$e $nom', (t) async {
           await _ouvrir(t, f.value, e, Reseau(inscrit: true));
@@ -141,6 +143,29 @@ void main() {
       await t.tap(find.text('Réglages').last);
       await _attendre(t, 500);
       await t.tap(find.text('Nom'));
+      await _attendre(t, 800);
+      await _cibles(t);
+    });
+
+    // Les fenêtres ajoutées depuis : les invitations en cours, et la fiche
+    // d'un membre de l'équipe.
+    testWidgets('telephone x$e invitations', (t) async {
+      await _ouvrir(t, _formats['telephone']!, e, Reseau(inscrit: true));
+      await _attendre(t, 400);
+      t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranAjout()));
+      await _attendre(t, 800);
+      await t.ensureVisible(find.textContaining('invitations en cours'));
+      await t.tap(find.textContaining('invitations en cours'));
+      await _attendre(t, 800);
+      await _cibles(t);
+    });
+
+    testWidgets('telephone x$e membre', (t) async {
+      await _ouvrir(t, _formats['telephone']!, e, Reseau(inscrit: true));
+      await _attendre(t, 400);
+      t.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => const EcranEquipe()));
+      await _attendre(t, 800);
+      await t.tap(find.text('lea.martin@gmail.com'));
       await _attendre(t, 800);
       await _cibles(t);
     });

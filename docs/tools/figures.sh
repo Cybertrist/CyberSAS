@@ -107,15 +107,15 @@ b{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;letter
 .v{--a:#3DDC97}.c{--a:#31E7FD}.g{--a:#5C6A7A}.o{--a:#94A3B0}
 .g i:after,.o i:after{background:transparent}
 </style></head><body><div class="w">
-$(etape fait 'Le tunnel, le serveur et le verrou' 'Noise IK, relais chiffré de bout en bout, certificats, politique et révocations signés. 79 tests Go, 8 cibles de fuzzing, 18 vérifications de bout en bout dans le labo.')
+$(etape fait 'Le tunnel, le serveur et le verrou' 'Noise IK, relais chiffré de bout en bout, certificats, politique et révocations signés. 102 tests Go, 8 cibles de fuzzing, 18 vérifications de bout en bout dans le labo.')
 $(etape fait 'Trois audits' '46 constats de trois relecteurs et d’une revue de sécurité, 10 aux outils du métier, puis 23 sur l’appli et l’admin à distance. Tous traités, un seul accepté et expliqué.')
 $(etape fait 'L’appli Android, avec le vrai tunnel' 'Le moteur Go embarqué et le service VPN d’Android : sur le Fold, l’interrupteur ouvre un vrai tunnel vers le labo.')
 $(etape fait 'L’admin depuis le téléphone' 'Signer une demande, refuser, inviter par un lien, renommer, retirer, révoquer. La clé du verrou dort dans la puce, une empreinte par signature.')
 $(etape fait 'La connexion Google dans l’appli' 'Le lien du réseau, puis l’invite native d’Android : un compte de l’équipe, une touche. Le serveur vérifie le jeton, l’admin signe.')
 $(etape fait 'L’équipe depuis l’appli' 'Ajouter un compte Google, changer son groupe, le retirer, chaque fois avec le doigt ; le serveur garde toujours un admin. Les invitations qui n’ont pas servi se voient et s’annulent.')
 $(etape fait 'Une appli juste, et lisible par tous' 'Les ports ouverts et le bouton Ouvrir dans le navigateur se déduisent de la politique signée. Des cibles de 48 dp, et des écrans qui tiennent jusqu’à une police une fois et demie plus grande.')
+$(etape fait 'Un secours pour la clé du verrou' 'Une sauvegarde chiffrée par une phrase, Argon2id puis XChaCha20-Poly1305, à ranger hors du téléphone. Le perdre ne gèle plus le réseau.')
 $(etape venir 'Le serveur en ligne' 'D’abord sur un ordinateur à la maison pour les essais, puis sur un VPS avec un certificat Let’s Encrypt et une nouvelle clé du verrou.')
-$(etape venir 'Un secours pour la clé du verrou' 'Perdre le téléphone de l’admin ne doit pas geler le réseau : une seconde clé, gardée hors ligne.')
 $(etape discuter 'L’appli Windows' 'Le moteur tourne déjà sur PC ; il manque le pilote réseau et l’interface.')
 $(etape discuter 'Un site, et une console web' 'Une vitrine pour présenter CyberSAS, et une console pour voir le réseau à distance, sans jamais pouvoir signer.')
 </div>
@@ -128,4 +128,4 @@ colonnes "$DOCS/schemas/limites.png" \
   "verified_user|Ce qui est vrai" \
   "Le serveur ne lit pas¦ ce que deux appareils s’envoient : une capture réseau sur le serveur ne voit que du chiffré, c’est l’un des essais du labo.|Un serveur piraté ne fait entrer personne.¦ Sans certificat signé par le verrou, un appareil est refusé par les autres.|Retirer quelqu’un de l’équipe¦ coupe ses appareils en cinq secondes au plus.|Trois audits¦, 79 constats : 78 corrigés, chacun avec son test quand c’est possible, un accepté et expliqué." \
   "info|Ce qui ne l’est pas" \
-  "Pas d’audit humain.¦ Pour des données dont la fuite serait grave, WireGuard reste le choix raisonnable.|Le serveur voit les métadonnées¦ : qui parle à qui, quand, et combien.|Ce n’est pas un VPN pour naviguer.¦ Il relie tes appareils entre eux ; ta navigation sur Internet ne passe pas par lui.|La clé du verrou n’a pas de secours¦ pour l’instant : perdre le téléphone de l’admin gèle les signatures. C’est un prochain gros sujet."
+  "Pas d’audit humain.¦ Pour des données dont la fuite serait grave, WireGuard reste le choix raisonnable.|Le serveur voit les métadonnées¦ : qui parle à qui, quand, et combien.|Ce n’est pas un VPN pour naviguer.¦ Il relie tes appareils entre eux ; ta navigation sur Internet ne passe pas par lui.|La sauvegarde du verrou vaut sa phrase.¦ Qui vole le texte peut essayer des phrases sans limite : quelques mots pris au hasard, jamais rangés au même endroit."

@@ -109,7 +109,7 @@ L'essai vérifie entre autres que :
 
 Pour inviter un téléphone : `bash scripts/sas.sh invitation <adresse Google>` donne le lien à ouvrir sur lui, puis `bash scripts/sas.sh signer <sa clé publique>` signe sa demande depuis l'ordinateur, si on ne le fait pas depuis l'appli. Une invitation qui n'a pas encore servi se voit avec `bash scripts/sas.sh invitations` et s'annule avec `bash scripts/sas.sh annuler <id>`, ou depuis l'écran d'ajout de l'appli.
 
-Les tests du code se lancent à part : `go test -race ./...` (79 tests, dont les vecteurs officiels de Noise, et 8 cibles de fuzzing).
+Les tests du code se lancent à part : `go test -race ./...` (102 tests, dont les vecteurs officiels de Noise, et 8 cibles de fuzzing).
 
 Pour brancher la connexion Google des pages web, créer dans la [console Google Cloud](https://console.cloud.google.com/apis/credentials) un ID client OAuth de type **Application Web**, avec comme URI de redirection `https://auth.<domaine>/oauth2/callback`, puis :
 
@@ -127,7 +127,7 @@ bash scripts/sas.sh google <id>.apps.googleusercontent.com   # le secret est dem
 
 CyberSAS a été relu trois fois. D'abord par trois relecteurs indépendants et une revue de sécurité : 46 constats, dont 3 hauts. Puis aux outils du métier (govulncheck, staticcheck, gosec, Semgrep, Trivy, Hadolint, ShellCheck, Gixy, fuzzing différentiel contre flynn/noise) : 10 de plus. Enfin sur l'appli et l'admin à distance : 23, dont un haut, une révocation depuis l'appli qui reprenait sans la vérifier la liste du serveur. Tout est traité, chaque fois avec son test quand c'est possible, sauf un constat accepté et expliqué.
 
-<img src="docs/schemas/limites.png" alt="Ce qui est vrai : le serveur ne lit pas ce que deux appareils s'envoient ; un serveur piraté ne fait entrer personne ; retirer quelqu'un coupe ses appareils en cinq secondes ; trois audits, 79 constats, 78 corrigés et un accepté et expliqué. Ce qui ne l'est pas : pas d'audit humain, WireGuard reste le choix raisonnable pour des données sensibles ; le serveur voit les métadonnées ; ce n'est pas un VPN pour naviguer ; la clé du verrou n'a pas encore de secours." width="100%">
+<img src="docs/schemas/limites.png" alt="Ce qui est vrai : le serveur ne lit pas ce que deux appareils s'envoient ; un serveur piraté ne fait entrer personne ; retirer quelqu'un coupe ses appareils en cinq secondes ; trois audits, 79 constats, 78 corrigés et un accepté et expliqué. Ce qui ne l'est pas : pas d'audit humain, WireGuard reste le choix raisonnable pour des données sensibles ; le serveur voit les métadonnées ; ce n'est pas un VPN pour naviguer ; la sauvegarde du verrou ne vaut que sa phrase." width="100%">
 
 Pour aller plus loin, quatre documents, dessinés comme ce README :
 
@@ -143,7 +143,7 @@ Pour aller plus loin, quatre documents, dessinés comme ce README :
 <a name="la-feuille-de-route"></a>
 <img src="docs/sections/s10.png" alt="10 La feuille de route" width="100%">
 
-<img src="docs/schemas/feuille.png" alt="La feuille de route. Fait : le tunnel, le serveur et le verrou, 79 tests Go, 8 cibles de fuzzing et 18 vérifications de bout en bout ; trois audits ; l'appli Android avec le vrai tunnel ; l'admin depuis le téléphone, signer, refuser, inviter, renommer, retirer, révoquer ; la connexion Google dans l'appli ; l'équipe depuis l'appli, ajouter, changer de groupe, retirer, avec toujours un admin, et les invitations en cours qu'on annule ; une appli juste et lisible, les ports tirés de la politique signée, des cibles de 48 dp et les grandes polices. À venir : le serveur en ligne, d'abord à la maison puis sur un VPS ; un secours pour la clé du verrou. À discuter : l'appli Windows ; un site vitrine et une console web qui ne peut pas signer." width="100%">
+<img src="docs/schemas/feuille.png" alt="La feuille de route. Fait : le tunnel, le serveur et le verrou, 102 tests Go, 8 cibles de fuzzing et 18 vérifications de bout en bout ; trois audits ; l'appli Android avec le vrai tunnel ; l'admin depuis le téléphone, signer, refuser, inviter, renommer, retirer, révoquer ; la connexion Google dans l'appli ; l'équipe depuis l'appli, ajouter, changer de groupe, retirer, avec toujours un admin, et les invitations en cours qu'on annule ; une appli juste et lisible, les ports tirés de la politique signée, des cibles de 48 dp et les grandes polices ; un secours pour la clé du verrou, chiffré par une phrase. À venir : le serveur en ligne, d'abord à la maison puis sur un VPS. À discuter : l'appli Windows ; un site vitrine et une console web qui ne peut pas signer." width="100%">
 
 Les figures de ce README sont dessinées par les scripts de `docs/tools` : aucune ne sort d'un logiciel de dessin, et chaque animation est vérifiée image par image avant d'être publiée.
 

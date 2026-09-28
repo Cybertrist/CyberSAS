@@ -701,13 +701,13 @@ Le service VPN n'est joignable que par le système ; le lien `cybersas://` n'est
 <a name="ce-qui-reste"></a>
 <img src="sections/audit/s10.png" alt="10 Ce qui reste" width="100%">
 
-<img src="schemas/audit/fiches-ce-qui-reste.png" alt="La clé privée de chaque appareil (à faire, aucun) ; La clé du verrou n'a pas de secours (à faire, aucun) ; Aucun audit humain (à faire, aucun) ; Les métadonnées (à faire, aucun) ; Les pages publiées par Nginx (à faire, aucun) ; Le premier contact (à faire, aucun) ; Google (à faire, aucun) ; La limite de débit de Nginx (à faire, aucun) ; L'adresse de retour après connexion web (à faire, aucun) ; Pas de liaison directe (à faire, aucun)." width="100%">
+<img src="schemas/audit/fiches-ce-qui-reste.png" alt="La clé privée de chaque appareil (à faire, aucun) ; La sauvegarde de secours du verrou (à faire, aucun) ; Aucun audit humain (à faire, aucun) ; Les métadonnées (à faire, aucun) ; Les pages publiées par Nginx (à faire, aucun) ; Le premier contact (à faire, aucun) ; Google (à faire, aucun) ; La limite de débit de Nginx (à faire, aucun) ; L'adresse de retour après connexion web (à faire, aucun) ; Pas de liaison directe (à faire, aucun)." width="100%">
 
 <details>
 <summary>Le détail</summary>
 
 - **La clé privée de chaque appareil** n'est pas enveloppée par la puce du téléphone (constat A18) : protégée par Android, exclue des sauvegardes.
-- **La clé du verrou n'a pas de secours** : perdre le téléphone de l'admin sans copie hors ligne gèle toute signature.
+- **La sauvegarde de secours du verrou** ne vaut que sa phrase : qui vole le texte peut essayer des phrases hors ligne, sans limite (Argon2id à 64 Mio ralentit chaque essai, sans l'empêcher).
 - **Aucun audit humain.** C'est la prochaine étape sérieuse avant de confier au
   VPN des données dont la fuite serait grave.
 - **Les métadonnées** : le serveur voit qui parle à qui, quand et combien.

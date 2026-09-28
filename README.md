@@ -105,7 +105,7 @@ L'essai vérifie entre autres que :
 - une personne retirée de l'équipe perd ses appareils en quelques secondes ;
 - après un redémarrage du serveur, les appareils reviennent seuls.
 
-Pour inviter un téléphone : `bash scripts/sas.sh invitation <adresse Google>` donne le lien à ouvrir sur lui, puis `bash scripts/sas.sh signer <sa clé publique>` signe sa demande depuis l'ordinateur, si on ne le fait pas depuis l'appli.
+Pour inviter un téléphone : `bash scripts/sas.sh invitation <adresse Google>` donne le lien à ouvrir sur lui, puis `bash scripts/sas.sh signer <sa clé publique>` signe sa demande depuis l'ordinateur, si on ne le fait pas depuis l'appli. Une invitation qui n'a pas encore servi se voit avec `bash scripts/sas.sh invitations` et s'annule avec `bash scripts/sas.sh annuler <id>`, ou depuis l'écran d'ajout de l'appli.
 
 Les tests du code se lancent à part : `go test -race ./...` (79 tests, dont les vecteurs officiels de Noise, et 8 cibles de fuzzing).
 

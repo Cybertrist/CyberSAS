@@ -678,7 +678,7 @@ Deux jours après les deux premiers, l'appli Android a pris le vrai tunnel, puis
 - **A12. La clé du verrou restait dans le presse-papiers** si l'import était annulé : il est vidé quoi qu'il arrive.
 - **A13. Retirer et révoquer ne montraient que le nom**, que le serveur choisit : le dialogue et l'invite affichent aussi l'empreinte et l'adresse.
 - **A14. Quitter pendant une synchronisation** pouvait réécrire `etat.json` juste après son effacement : `Quitter` attend la fin réelle du moteur, efface un fichier illisible, et une panique du moteur devient une erreur affichée au lieu de tuer l'appli.
-- **A15. Les invitations** : les clés expirées n'étaient jamais purgées. Ménage à chaque création, et 50 clés vivantes au plus.
+- **A15. Les invitations** : les clés expirées n'étaient jamais purgées. Ménage à chaque création, et 50 clés vivantes au plus. Et une invitation envoyée ne pouvait plus être retirée : l'admin voit maintenant celles qui n'ont pas servi (pour qui, jusqu'à quand, jamais la clé) et en annule une, depuis l'appli ou avec `sas.sh annuler` ; annulée, elle n'inscrit plus personne.
 - **A16. Le lien d'invitation** : un lien sans clé du verrou ou avec une autorité de certification personnalisée est maintenant signalé clairement à l'écran de connexion.
 - **A17. Nginx coupait à 16 Ko** ce que sasd accepte jusqu'à 256 Ko : les routes des certificats et des révocations montent à 256 Ko.
 

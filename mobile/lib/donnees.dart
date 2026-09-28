@@ -1182,7 +1182,7 @@ String duree(Duration d) {
 }
 
 /// La version affichée dans « À propos » (même valeur que pubspec.yaml).
-const versionAppli = '0.8.1';
+const versionAppli = '0.9.0';
 
 /// « tristan.joncour@gmail.com » → « Tristan » : de quoi nommer quelqu'un
 /// sans son nom complet.

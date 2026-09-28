@@ -33,6 +33,10 @@ const (
 	// qu'il vient de signer sur son téléphone.
 	CheminInvitation  = "/api/v1/invitation"
 	CheminRevocations = "/api/v1/revocations"
+	// CheminInvitations : les invitations en cours, sans leur clé.
+	// CheminAnnulation : en annuler une avant qu'elle ne serve.
+	CheminInvitations = "/api/v1/invitations"
+	CheminAnnulation  = "/api/v1/invitations/annulation"
 )
 
 // DemandeLibelle : le nouveau nom affiché. ClePublique désigne un autre
@@ -149,6 +153,25 @@ type DemandeInvitation struct {
 type ReponseInvitation struct {
 	Cle    string    `json:"cle"`
 	Expire time.Time `json:"expire"`
+}
+
+// Invitation : une clé d'inscription en cours, jamais la clé elle-même.
+// ID la désigne pour l'annuler, et ne permet pas de s'inscrire. Pour une
+// machine (« sasd cle --etiquette »), Etiquette et Nom au lieu
+// d'Utilisateur ; Createur est vide pour une clé créée sur le serveur.
+type Invitation struct {
+	ID          string    `json:"id"`
+	Utilisateur string    `json:"utilisateur,omitempty"`
+	Etiquette   string    `json:"etiquette,omitempty"`
+	Nom         string    `json:"nom,omitempty"`
+	Createur    string    `json:"createur,omitempty"`
+	Cree        time.Time `json:"cree,omitzero"`
+	Expire      time.Time `json:"expire"`
+}
+
+// DemandeAnnulation : l'invitation à annuler.
+type DemandeAnnulation struct {
+	ID string `json:"id"`
 }
 
 type Erreur struct {

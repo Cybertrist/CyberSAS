@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -87,7 +88,9 @@ CREATE TABLE IF NOT EXISTS cles (
 	etiquette   TEXT NOT NULL DEFAULT '',
 	utilisateur TEXT NOT NULL DEFAULT '',
 	nom         TEXT NOT NULL DEFAULT '',
-	expire      INTEGER NOT NULL
+	expire      INTEGER NOT NULL,
+	cree        INTEGER NOT NULL DEFAULT 0,
+	createur    TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS comptes (
 	email TEXT PRIMARY KEY,
@@ -117,6 +120,20 @@ func Ouvrir(chemin string) (*Base, error) {
 	if n == 0 {
 		if _, err := db.Exec(`ALTER TABLE appareils ADD COLUMN libelle TEXT NOT NULL DEFAULT ''`); err != nil {
 			return nil, fmt.Errorf("schéma : %w", err)
+		}
+	}
+	// Une base créée avant la liste des invitations : la date de création
+	// et l'admin qui l'a faite. Les clés déjà là restent sans l'une ni
+	// l'autre.
+	for _, c := range []string{"cree INTEGER NOT NULL DEFAULT 0", "createur TEXT NOT NULL DEFAULT ''"} {
+		nom, _, _ := strings.Cut(c, " ")
+		if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('cles') WHERE name = ?`, nom).Scan(&n); err != nil {
+			return nil, fmt.Errorf("schéma : %w", err)
+		}
+		if n == 0 {
+			if _, err := db.Exec(`ALTER TABLE cles ADD COLUMN ` + c); err != nil {
+				return nil, fmt.Errorf("schéma : %w", err)
+			}
 		}
 	}
 	return &Base{db: db}, nil
@@ -424,14 +441,86 @@ func NouvelleCle() string {
 // CreerCle enregistre une clé d'inscription à usage unique. Pour une
 // machine, nom est le nom qu'elle portera dans le VPN.
 func (b *Base) CreerCle(cle, etiquette, utilisateur, nom string, expire time.Time) error {
+	return b.CreerInvitation(cle, etiquette, utilisateur, nom, "", expire)
+}
+
+// CreerInvitation : CreerCle, en retenant qui l'a créée (l'adresse de
+// l'admin, vide depuis « sasd cle »).
+func (b *Base) CreerInvitation(cle, etiquette, utilisateur, nom, createur string, expire time.Time) error {
 	// Une clé expirée ne sert plus à rien : on fait le ménage à chaque
 	// création, sinon seules les clés consommées quitteraient la table.
 	if _, err := b.db.Exec(`DELETE FROM cles WHERE expire < ?`, time.Now().Unix()); err != nil {
 		return err
 	}
-	_, err := b.db.Exec(`INSERT INTO cles (empreinte, etiquette, utilisateur, nom, expire) VALUES (?, ?, ?, ?, ?)`,
-		Empreinte(cle), etiquette, strings.ToLower(utilisateur), nom, expire.Unix())
+	_, err := b.db.Exec(`INSERT INTO cles (empreinte, etiquette, utilisateur, nom, expire, cree, createur) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		Empreinte(cle), etiquette, strings.ToLower(utilisateur), nom, expire.Unix(), time.Now().Unix(), createur)
 	return err
+}
+
+// Invitation : une clé d'inscription en cours, sans la clé. ID est le
+// début de son empreinte (8 octets en hexadécimal) : de quoi la désigner
+// pour l'annuler, rien pour la retrouver ni s'en servir.
+type Invitation struct {
+	ID          string
+	Etiquette   string
+	Utilisateur string
+	Nom         string
+	Createur    string
+	Cree        time.Time // zéro : clé créée avant qu'on retienne la date
+	Expire      time.Time
+}
+
+// longueurID : les octets d'empreinte qui désignent une invitation.
+const longueurID = 8
+
+func lireInvitation(r interface{ Scan(...any) error }) (Invitation, error) {
+	var i Invitation
+	var id []byte
+	var cree, expire int64
+	if err := r.Scan(&id, &i.Etiquette, &i.Utilisateur, &i.Nom, &i.Createur, &cree, &expire); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return i, ErrIntrouvable
+		}
+		return i, err
+	}
+	i.ID, i.Expire = hex.EncodeToString(id), time.Unix(expire, 0)
+	if cree != 0 {
+		i.Cree = time.Unix(cree, 0)
+	}
+	return i, nil
+}
+
+const colonnesInvitation = `substr(empreinte, 1, 8), etiquette, utilisateur, nom, createur, cree, expire`
+
+// Invitations : les clés d'inscription ni consommées ni expirées, la plus
+// proche de l'expiration d'abord.
+func (b *Base) Invitations() ([]Invitation, error) {
+	lignes, err := b.db.Query(`SELECT `+colonnesInvitation+` FROM cles WHERE expire >= ? ORDER BY expire`, time.Now().Unix())
+	if err != nil {
+		return nil, err
+	}
+	defer lignes.Close()
+	var r []Invitation
+	for lignes.Next() {
+		i, err := lireInvitation(lignes)
+		if err != nil {
+			return nil, err
+		}
+		r = append(r, i)
+	}
+	return r, lignes.Err()
+}
+
+// AnnulerInvitation efface la clé d'inscription que désigne id, si elle
+// vit encore. Enregistrer la consomme par un DELETE lui aussi : une fois
+// annulée, elle n'inscrit plus personne, même une demande déjà en route.
+func (b *Base) AnnulerInvitation(id string) (Invitation, error) {
+	debut, err := hex.DecodeString(id)
+	if err != nil || len(debut) != longueurID {
+		return Invitation{}, ErrIntrouvable
+	}
+	return lireInvitation(b.db.QueryRow(`DELETE FROM cles WHERE substr(empreinte, 1, 8) = ? AND expire >= ?
+		RETURNING `+colonnesInvitation, debut, time.Now().Unix()))
 }
 
 // ClesVivantes : le nombre de clés d'inscription pas encore expirées.

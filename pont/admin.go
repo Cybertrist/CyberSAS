@@ -1,6 +1,7 @@
 package pont
 
 import (
+	"cmp"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -233,6 +235,51 @@ func Inviter(dossier, utilisateur string, minutes int) (string, error) {
 		return "", err
 	}
 	return lienRejoindre(e, r.Cle), nil
+}
+
+// EnCours : une invitation pas encore utilisée, pour l'écran de l'admin.
+// Pour : l'adresse invitée, ou le nom d'une machine (Machine). Cree et
+// Expire en secondes Unix ; Cree vaut 0 quand le serveur ne le sait pas.
+type EnCours struct {
+	ID       string `json:"id"`
+	Pour     string `json:"pour"`
+	Machine  bool   `json:"machine"`
+	Createur string `json:"createur"`
+	Cree     int64  `json:"cree"`
+	Expire   int64  `json:"expire"`
+}
+
+// idInvitation : 16 chiffres hexadécimaux, ce que rend le serveur.
+var idInvitation = regexp.MustCompile(`^[0-9a-f]{16}$`)
+
+// Invitations : les invitations en cours, en JSON ([]EnCours). Le serveur
+// n'en donne jamais la clé. Réservé aux admins.
+func Invitations(dossier string) (string, error) {
+	var liste []protocole.Invitation
+	if err := appel(dossier, "GET", protocole.CheminInvitations, nil, &liste); err != nil {
+		return "", err
+	}
+	r := []EnCours{}
+	for _, i := range liste {
+		if !idInvitation.MatchString(i.ID) {
+			continue
+		}
+		c := EnCours{ID: i.ID, Pour: client.Propre(i.Utilisateur), Createur: client.Propre(i.Createur), Expire: i.Expire.Unix()}
+		if i.Utilisateur == "" {
+			c.Pour, c.Machine = client.Propre(cmp.Or(i.Nom, i.Etiquette)), true
+		}
+		if !i.Cree.IsZero() {
+			c.Cree = i.Cree.Unix()
+		}
+		r = append(r, c)
+	}
+	b, _ := json.Marshal(r)
+	return string(b), nil
+}
+
+// AnnulerInvitation : l'invitation id ne permet plus de s'inscrire.
+func AnnulerInvitation(dossier, id string) error {
+	return appel(dossier, "POST", protocole.CheminAnnulation, protocole.DemandeAnnulation{ID: id}, nil)
 }
 
 // LienReseau : le lien permanent du réseau, sans clé d'inscription. Il

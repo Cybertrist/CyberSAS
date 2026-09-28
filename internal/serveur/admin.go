@@ -215,12 +215,57 @@ func (s *Serveur) invitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cle, expire := base.NouvelleCle(), time.Now().Add(time.Duration(minutes)*time.Minute)
-	if err := s.base.CreerCle(cle, "", qui, "", expire); err != nil {
+	if err := s.base.CreerInvitation(cle, "", qui, "", moi.Proprietaire, expire); err != nil {
 		refuser(w, http.StatusInternalServerError, "invitation impossible")
 		return
 	}
 	s.journal.Info("invitation créée", "evenement", "invitation", "pour", qui, "minutes", minutes, "par", moi.Nom)
 	repondre(w, http.StatusOK, protocole.ReponseInvitation{Cle: cle, Expire: expire})
+}
+
+// invitations : les clés d'inscription en cours, celles de l'appli comme
+// celles de « sasd cle ». La base n'a que leur empreinte : la clé n'en
+// sort jamais, seulement de quoi la désigner.
+func (s *Serveur) invitations(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.admin(w, r); !ok {
+		return
+	}
+	liste, err := s.base.Invitations()
+	if err != nil {
+		refuser(w, http.StatusInternalServerError, "base indisponible")
+		return
+	}
+	r2 := []protocole.Invitation{}
+	for _, i := range liste {
+		r2 = append(r2, protocole.Invitation{ID: i.ID, Utilisateur: i.Utilisateur, Etiquette: i.Etiquette, Nom: i.Nom,
+			Createur: i.Createur, Cree: i.Cree, Expire: i.Expire})
+	}
+	repondre(w, http.StatusOK, r2)
+}
+
+// annulation : une invitation envoyée au mauvais endroit, ou qui ne sert
+// plus. Effacée de la base, elle n'inscrit plus personne.
+func (s *Serveur) annulation(w http.ResponseWriter, r *http.Request) {
+	moi, ok := s.admin(w, r)
+	if !ok {
+		return
+	}
+	var d protocole.DemandeAnnulation
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10)).Decode(&d); err != nil {
+		refuser(w, http.StatusBadRequest, "demande illisible")
+		return
+	}
+	i, err := s.base.AnnulerInvitation(strings.TrimSpace(d.ID))
+	if errors.Is(err, base.ErrIntrouvable) {
+		refuser(w, http.StatusNotFound, "invitation inconnue, déjà utilisée ou expirée")
+		return
+	}
+	if err != nil {
+		refuser(w, http.StatusInternalServerError, "annulation impossible")
+		return
+	}
+	s.journal.Warn("invitation annulée", "evenement", "annulation", "id", i.ID, "pour", i.Utilisateur+i.Etiquette, "par", moi.Nom)
+	repondre(w, http.StatusOK, map[string]string{"etat": "annulée"})
 }
 
 // revocations : la liste de révocation signée sur le téléphone de l'admin.

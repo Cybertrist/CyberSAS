@@ -7,6 +7,8 @@
 #   sas.sh membre <email> <groupe>   donne l'accès à un compte Google (admins ou equipe)
 #   sas.sh retirer <email>           le lui retire, et coupe ses appareils
 #   sas.sh invitation <email>        un lien cybersas:// pour que son appareil rejoigne le réseau
+#   sas.sh invitations               les invitations pas encore utilisées
+#   sas.sh annuler <id>              en annule une
 #   sas.sh demarrer                  construit et lance la pile
 #   sas.sh etat                      les appareils du VPN
 #   sas.sh arreter                   arrête tout, sans rien effacer
@@ -213,7 +215,15 @@ cmd_invitation () {
   lien="cybersas://rejoindre?serveur=$(url "https://vpn.$DOMAINE")&cle=$(url "$cle")&verrou=$(url "$verrou")"
   [ "$TLS" = labo ] && lien+="&autorite=$(url "$(base64 -w0 < "$ETAT/ca/public/cybersas-ca.pem")")"
   printf '%s\n' "$lien"
-  echo "valable $duree, une seule fois" >&2
+  echo "valable $duree, une seule fois (sas.sh annuler pour la retirer avant)" >&2
+}
+
+# Les invitations en cours, et l'annulation de l'une d'elles : une clé
+# annulée ne fait plus entrer personne. Les mêmes que dans l'appli.
+cmd_invitations () { sasd invitations; }
+cmd_annuler () {
+  [ $# -eq 1 ] || meurt "usage : sas.sh annuler <id> (voir sas.sh invitations)"
+  sasd annuler "$1"
 }
 
 # url : encode ce qui ne passe pas tel quel dans un lien (base64 surtout).
@@ -509,6 +519,8 @@ case "$commande" in
   google) charger_env; cmd_google "$@" ;;
   membre) charger_env; cmd_membre "$@" ;;
   invitation) charger_env; cmd_invitation "$@" ;;
+  invitations) charger_env; cmd_invitations ;;
+  annuler) charger_env; cmd_annuler "$@" ;;
   retirer) charger_env; cmd_retirer "$@" ;;
   demarrer) cmd_demarrer ;;
   signer) cmd_signer "$@" ;;
@@ -518,5 +530,5 @@ case "$commande" in
   essai) cmd_essai ;;
   etat) cmd_etat ;;
   arreter) cmd_arreter ;;
-  *) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -165,6 +166,79 @@ func TestInvitation(t *testing.T) {
 	k2, _ := noise.GenererCle()
 	if code := b.appel("POST", protocole.CheminConnexion, "", b.demande(k2, inv.Cle, "autre"), nil); code == http.StatusOK {
 		t.Error("l'invitation a servi deux fois")
+	}
+}
+
+// Les invitations en cours : réservées aux admins, sans jamais la clé ; une
+// invitation annulée n'inscrit plus personne, et ne s'annule qu'une fois.
+func TestAnnulationInvitation(t *testing.T) {
+	b := nouveauBanc(t)
+	os.WriteFile(b.srv.cfg.Equipe, []byte("admin@x.fr admins\nalice@x.fr equipe\n"), 0o600)
+	admin := b.inscrire("", "admin@x.fr", "fold")
+	alice := b.inscrire("", "alice@x.fr", "portable")
+
+	var inv protocole.ReponseInvitation
+	if code := b.appel("POST", protocole.CheminInvitation, admin.Jeton, protocole.DemandeInvitation{Utilisateur: "alice@x.fr", Minutes: 60}, &inv); code != http.StatusOK {
+		t.Fatalf("invitation : %d", code)
+	}
+	machine := b.cle("maison", "", "maison") // comme « sasd cle »
+
+	if code := b.appel("GET", protocole.CheminInvitations, alice.Jeton, nil, nil); code != http.StatusForbidden {
+		t.Errorf("liste sans être admin : %d, 403 attendu", code)
+	}
+	var brut json.RawMessage
+	if code := b.appel("GET", protocole.CheminInvitations, admin.Jeton, nil, &brut); code != http.StatusOK {
+		t.Fatalf("liste : %d", code)
+	}
+	if strings.Contains(string(brut), inv.Cle) || strings.Contains(string(brut), machine) {
+		t.Fatalf("la liste montre une clé : %s", brut)
+	}
+	var liste []protocole.Invitation
+	json.Unmarshal(brut, &liste)
+	if len(liste) != 2 {
+		t.Fatalf("%d invitations, 2 attendues : %s", len(liste), brut)
+	}
+	var id string
+	for _, i := range liste {
+		if i.Utilisateur == "alice@x.fr" {
+			id = i.ID
+			if i.Createur != "admin@x.fr" || i.Cree.IsZero() || time.Until(i.Expire) < 59*time.Minute {
+				t.Errorf("invitation d'Alice : %+v", i)
+			}
+		}
+	}
+	if len(id) != 16 {
+		t.Fatalf("identifiant : %q", id)
+	}
+
+	if code := b.appel("POST", protocole.CheminAnnulation, alice.Jeton, protocole.DemandeAnnulation{ID: id}, nil); code != http.StatusForbidden {
+		t.Errorf("annulation sans être admin : %d, 403 attendu", code)
+	}
+	for _, faux := range []string{"", "zz", inv.Cle, "0000000000000000"} {
+		if code := b.appel("POST", protocole.CheminAnnulation, admin.Jeton, protocole.DemandeAnnulation{ID: faux}, nil); code != http.StatusNotFound {
+			t.Errorf("annulation de %q : %d, 404 attendu", faux, code)
+		}
+	}
+	if code := b.appel("POST", protocole.CheminAnnulation, admin.Jeton, protocole.DemandeAnnulation{ID: id}, nil); code != http.StatusOK {
+		t.Fatalf("annulation : %d", code)
+	}
+	if code := b.appel("POST", protocole.CheminAnnulation, admin.Jeton, protocole.DemandeAnnulation{ID: id}, nil); code != http.StatusNotFound {
+		t.Errorf("deuxième annulation : %d, 404 attendu", code)
+	}
+
+	// Annulée : elle n'inscrit plus personne. La clé de la machine, elle,
+	// sert toujours.
+	k, _ := noise.GenererCle()
+	if code := b.appel("POST", protocole.CheminConnexion, "", b.demande(k, inv.Cle, "tablette"), nil); code == http.StatusOK {
+		t.Fatal("inscription avec une invitation annulée")
+	}
+	b.appel("GET", protocole.CheminInvitations, admin.Jeton, nil, &liste)
+	if len(liste) != 1 || liste[0].Etiquette != "maison" {
+		t.Fatalf("après l'annulation : %+v", liste)
+	}
+	k2, _ := noise.GenererCle()
+	if code := b.appel("POST", protocole.CheminConnexion, "", b.demande(k2, machine, "maison"), nil); code != http.StatusOK {
+		t.Errorf("la clé de la machine ne sert plus : %d", code)
 	}
 }
 

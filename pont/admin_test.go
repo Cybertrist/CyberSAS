@@ -30,6 +30,8 @@ type fauxServeur struct {
 	revocations *protocole.ListeRevocations
 	signes      []protocole.Appareil
 	liste       *protocole.ListeRevocations
+	invitations []protocole.Invitation
+	annulee     string
 }
 
 func (f *fauxServeur) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +45,13 @@ func (f *fauxServeur) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(protocole.EtatReseau{Revocations: f.revocations})
 	case protocole.CheminSignatures:
 		json.NewDecoder(r.Body).Decode(&f.signes)
+		w.Write([]byte("{}"))
+	case protocole.CheminInvitations:
+		json.NewEncoder(w).Encode(f.invitations)
+	case protocole.CheminAnnulation:
+		var d protocole.DemandeAnnulation
+		json.NewDecoder(r.Body).Decode(&d)
+		f.annulee = d.ID
 		w.Write([]byte("{}"))
 	case protocole.CheminRevocations:
 		f.liste = &protocole.ListeRevocations{}
@@ -175,5 +184,36 @@ func TestLienReseau(t *testing.T) {
 	}
 	if q.Get("verrou") != base64.StdEncoding.EncodeToString(pub) || !strings.HasPrefix(q.Get("serveur"), "https://") || q.Get("autorite") == "" {
 		t.Fatalf("lien incomplet : %q", lien)
+	}
+}
+
+// Les invitations en cours : une machine se montre par son nom, un
+// identifiant qui n'est pas celui d'une invitation est écarté, les textes
+// du serveur sont nettoyés ; l'annulation envoie l'identifiant tel quel.
+func TestInvitations(t *testing.T) {
+	dossier, _, f, _ := banc(t)
+	expire := time.Now().Add(time.Hour).Truncate(time.Second)
+	f.invitations = []protocole.Invitation{
+		{ID: "0123456789abcdef", Utilisateur: "alice@x.fr", Createur: "admin@x.fr", Cree: expire.Add(-time.Hour), Expire: expire},
+		{ID: "fedcba9876543210", Etiquette: "maison", Nom: "nas\u202e", Expire: expire},
+		{ID: "../retrait", Utilisateur: "bob@x.fr", Expire: expire},
+	}
+	j, err := Invitations(dossier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var liste []EnCours
+	json.Unmarshal([]byte(j), &liste)
+	if len(liste) != 2 {
+		t.Fatalf("%d invitations, 2 attendues : %s", len(liste), j)
+	}
+	if a := liste[0]; a.Pour != "alice@x.fr" || a.Machine || a.Createur != "admin@x.fr" || a.Expire != expire.Unix() || a.Cree != expire.Unix()-3600 {
+		t.Errorf("invitation d'Alice : %+v", a)
+	}
+	if m := liste[1]; !m.Machine || m.Pour != client.Propre("nas\u202e") || m.Cree != 0 {
+		t.Errorf("machine : %+v", m)
+	}
+	if err := AnnulerInvitation(dossier, "0123456789abcdef"); err != nil || f.annulee != "0123456789abcdef" {
+		t.Fatalf("annulation : %v, %q", err, f.annulee)
 	}
 }

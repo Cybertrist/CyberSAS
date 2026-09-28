@@ -6,11 +6,14 @@
 //	sasd appareils [--json]            les appareils inscrits
 //	sasd signatures < certificats.json importe les certificats signés par le verrou
 //	sasd retirer <nom>                 coupe un appareil
+//	sasd invitations                   les clés d'inscription en cours
+//	sasd annuler <id>                  en annule une avant qu'elle ne serve
 //
 // La configuration vient de l'environnement, voir config().
 package main
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -113,6 +116,17 @@ func main() {
 			if l := serveur.RevocationsEnVigueur(cfg.Revocations, cfg.RevocationsAppli); l != nil {
 				json.NewEncoder(os.Stdout).Encode(l)
 			}
+		case "invitations":
+			cmdInvitations(b)
+		case "annuler":
+			if len(os.Args) != 3 {
+				meurt("usage : sasd annuler <id> (voir sasd invitations)")
+			}
+			i, err := b.AnnulerInvitation(os.Args[2])
+			if err != nil {
+				meurt("%s : invitation inconnue, déjà utilisée ou expirée", os.Args[2])
+			}
+			fmt.Printf("invitation pour %s annulée\n", pourQui(i))
 		case "retirer":
 			if len(os.Args) != 3 {
 				meurt("usage : sasd retirer <nom>")
@@ -188,6 +202,29 @@ func cmdAppareils(b *base.Base, cfg reglages, args []string) {
 			client.EmpreinteCle(a.ClePublique), cert, a.Vu.Format("02/01 15:04"))
 	}
 	t.Flush()
+}
+
+// cmdInvitations : les clés d'inscription ni utilisées ni expirées. On
+// n'en montre que l'identifiant : la base n'a pas la clé.
+func cmdInvitations(b *base.Base) {
+	liste, err := b.Invitations()
+	if err != nil {
+		meurt("%v", err)
+	}
+	t := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(t, "ID\tPOUR\tCRÉÉE PAR\tEXPIRE LE")
+	for _, i := range liste {
+		fmt.Fprintf(t, "%s\t%s\t%s\t%s\n", i.ID, pourQui(i), tiret(i.Createur), i.Expire.Format("02/01 15:04"))
+	}
+	t.Flush()
+}
+
+// pourQui : l'adresse invitée, ou la machine.
+func pourQui(i base.Invitation) string {
+	if i.Utilisateur != "" {
+		return i.Utilisateur
+	}
+	return "machine " + cmp.Or(i.Nom, i.Etiquette)
 }
 
 // cmdSignatures lit sur l'entrée les certificats produits par

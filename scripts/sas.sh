@@ -19,6 +19,9 @@
 #   sas.sh signer <clé> [<clé>...]   signe ces appareils-là, et eux seuls
 #   sas.sh politique                 signe politique/politique.json
 #   sas.sh revoquer <clé>            bannit un appareil (volé, perdu)
+#   sas.sh secours                   sauvegarde de secours de la clé, chiffrée par une phrase
+#   sas.sh secours verifier [F]      vérifie qu'une sauvegarde s'ouvre et redonne la clé
+#   sas.sh secours restaurer [F]     recrée etat/verrou/cle à partir d'une sauvegarde
 #
 # Le labo seulement (TLS=labo) :
 #   sas.sh labo                      lance la fausse maison et le poste d'essai
@@ -318,6 +321,67 @@ cmd_revoquer () {
   ok "liste de révocation à jour : les appareils l'appliqueront d'ici dix secondes"
 }
 
+# La sauvegarde de secours de la clé du verrou : un texte chiffré par une
+# phrase de passe (Argon2id, XChaCha20-Poly1305, voir docs/verrou.md), à
+# ranger hors de cette machine. La phrase est demandée ici, sans écho, et
+# passe au conteneur par son entrée : ni en argument, ni dans
+# l'environnement.
+phrase_secours () {
+  local p p2
+  read -rsp "phrase de passe (12 caractères au moins) : " p < /dev/tty; echo >&2
+  [ "${#p}" -ge 12 ] || meurt "phrase trop courte : 12 caractères au moins"
+  if [ "${1:-}" = confirmer ]; then
+    read -rsp "encore une fois : " p2 < /dev/tty; echo >&2
+    [ "$p" = "$p2" ] || meurt "les deux phrases diffèrent"
+  fi
+  PHRASE="$p"
+}
+
+cmd_secours () {
+  charger_env
+  local action="${1:-creer}" fichier="${2:-$VERROU/secours.txt}"
+  case "$action" in
+    creer)
+      [ $# -le 1 ] || meurt "usage : sas.sh secours [verifier|restaurer [fichier]]"
+      [ -f "$VERROU/cle" ] || meurt "pas de clé privée du verrou sur cette machine (sas verrou secours, sur l'ordinateur de l'admin)"
+      phrase_secours confirmer
+      printf '%s\n' "$PHRASE" | verrou_admin secours > "$VERROU/secours.txt.tmp" \
+        || { rm -f "$VERROU/secours.txt.tmp"; meurt "sauvegarde ratée"; }
+      mv "$VERROU/secours.txt.tmp" "$VERROU/secours.txt"
+      ok "sauvegarde écrite dans $VERROU/secours.txt : la copier hors de cette machine, puis la vérifier (sas.sh secours verifier)"
+      ;;
+    verifier|restaurer)
+      [ -f "$fichier" ] || meurt "pas de sauvegarde : $fichier"
+      [ "$TLS" = labo ] || meurt "hors du labo, la clé du verrou n'a rien à faire sur le serveur : sas verrou restaurer sur l'ordinateur de l'admin"
+      if [ "$action" = verifier ]; then
+        [ -f "$VERROU/cle" ] || meurt "pas de clé à comparer : sas.sh secours restaurer pour la recréer"
+      else
+        [ ! -f "$VERROU/cle" ] || meurt "$VERROU/cle existe déjà : on ne remplace pas une clé de verrou (sas.sh secours verifier pour comparer)"
+      fi
+      phrase_secours
+      # Le dossier du verrou, en écriture seulement pour restaurer ; la
+      # sauvegarde, où qu'elle soit, en lecture seule.
+      local v s mode=ro publique
+      v="$(cd "$VERROU" && { pwd -W 2>/dev/null || pwd; })"
+      s="$(cd "$(dirname "$fichier")" && { pwd -W 2>/dev/null || pwd; })/$(basename "$fichier")"
+      if [ "$action" = restaurer ]; then mode=rw; fi
+      publique="$(printf '%s\n' "$PHRASE" | docker run --rm -i -v "$v:/verrou:$mode" -v "$s:/secours.txt:ro" \
+        cybersas:dev sas verrou restaurer --fichier /verrou/cle --secours /secours.txt)" || meurt "sauvegarde refusée"
+      if [ "$action" = restaurer ]; then
+        # La clé recréée doit être celle que le serveur connaît.
+        if [ -f "$VERROU/publique" ] && [ "$publique" != "$(tr -d '\r\n' < "$VERROU/publique")" ]; then
+          rm -f "$VERROU/cle"
+          meurt "cette sauvegarde est celle d'un autre verrou que $VERROU/publique : rien n'est restauré"
+        fi
+        ok "clé du verrou restaurée dans $VERROU/cle"
+      else
+        ok "la sauvegarde s'ouvre et redonne la clé du verrou"
+      fi
+      ;;
+    *) meurt "usage : sas.sh secours [verifier|restaurer [fichier]]" ;;
+  esac
+}
+
 # --- démarrage ---------------------------------------------------------------
 
 attendre_sasd () {
@@ -549,9 +613,10 @@ case "$commande" in
   signer) cmd_signer "$@" ;;
   politique) cmd_politique ;;
   revoquer) cmd_revoquer "$@" ;;
+  secours) cmd_secours "$@" ;;
   labo) cmd_labo ;;
   essai) cmd_essai ;;
   etat) cmd_etat ;;
   arreter) cmd_arreter ;;
-  *) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

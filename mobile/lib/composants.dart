@@ -977,3 +977,85 @@ Format formatDe(BuildContext context) {
   if (s.width >= 600) return Format.portrait;
   return Format.compact;
 }
+
+/// Un champ au texte masqué, pour une clé ou une phrase de passe : ni
+/// correction ni suggestions, rien que le clavier puisse retenir.
+class ChampMasque extends StatelessWidget {
+  const ChampMasque({
+    super.key,
+    required this.controleur,
+    required this.indication,
+    this.enMono = false,
+    this.autofocus = false,
+    this.fin,
+    this.onChanged,
+    this.onSubmitted,
+    this.action = TextInputAction.next,
+  });
+  final TextEditingController controleur;
+  final String indication;
+
+  /// JetBrains Mono, pour une clé en base64.
+  final bool enMono;
+  final bool autofocus;
+
+  /// Au bout du champ : « Coller », par exemple.
+  final Widget? fin;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = enMono ? mono(15, graisse: 400) : texte(16, graisse: 500);
+    return TextField(
+      controller: controleur,
+      autofocus: autofocus,
+      obscureText: true,
+      autocorrect: false,
+      enableSuggestions: false,
+      keyboardType: TextInputType.visiblePassword,
+      textInputAction: action,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      style: style,
+      decoration: InputDecoration(
+        hintText: indication,
+        hintStyle: style.copyWith(color: Couleurs.tertiaire),
+        filled: true,
+        fillColor: Couleurs.bloc,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        suffixIcon: fin,
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Couleurs.bordure)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Couleurs.cyan)),
+      ),
+    );
+  }
+}
+
+/// Une fenêtre de l'appli : centrée, jamais en feuille du bas, et qui
+/// défile si les grandes polices la rendent plus haute que l'écran.
+class Fenetre extends StatelessWidget {
+  const Fenetre({super.key, required this.enfants, this.bordure = Bords.reflet, this.largeur = 420});
+  final List<Widget> enfants;
+  final LinearGradient bordure;
+  final double largeur;
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    backgroundColor: Colors.transparent,
+    insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: largeur),
+      child: Bordee(
+        bordure: bordure,
+        fond: const Color(0xFF0A1119),
+        rayon: 24,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: enfants),
+        ),
+      ),
+    ),
+  );
+}

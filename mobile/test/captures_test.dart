@@ -13,6 +13,7 @@ import 'package:cybersas/ecrans/ajout.dart';
 import 'package:cybersas/ecrans/demandes.dart';
 import 'package:cybersas/ecrans/detail.dart';
 import 'package:cybersas/ecrans/equipe.dart';
+import 'package:cybersas/ecrans/reglages.dart';
 import 'package:cybersas/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -164,6 +165,49 @@ void main() {
     await t.tap(find.text('Nom'));
     await _attendre(t, 800);
     await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-renommer.png'));
+  });
+
+  // La sauvegarde de secours : la phrase tapée deux fois, puis le texte
+  // prêt à partager.
+  Future<void> ouvrirSecours(WidgetTester t) async {
+    await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
+    await t.tap(find.text('Réglages').last);
+    await _attendre(t, 500);
+    await t.scrollUntilVisible(find.text('Sauvegarde de secours'), 200,
+        scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first);
+    await t.tap(find.text('Sauvegarde de secours'));
+    await _attendre(t, 800);
+    await t.enterText(find.byType(TextField).at(0), phraseDemo);
+    await t.enterText(find.byType(TextField).at(1), phraseDemo);
+    await _attendre(t, 400);
+  }
+
+  _capture('telephone secours-phrase', (t) async {
+    addTearDown(t.view.reset);
+    await ouvrirSecours(t);
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-secours-phrase.png'));
+  });
+
+  _capture('telephone secours-pret', (t) async {
+    addTearDown(t.view.reset);
+    await ouvrirSecours(t);
+    await t.tap(find.text('Chiffrer'));
+    await _attendre(t, 800);
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-secours-pret.png'));
+  });
+
+  // Une sauvegarde collée là où l'on range la clé du verrou : la fenêtre
+  // reconnaît son verrou et demande sa phrase.
+  _capture('telephone secours-coller', (t) async {
+    addTearDown(t.view.reset);
+    await _ouvrir(t, _formats['telephone']!, Reseau(inscrit: true));
+    await t.tap(find.text('Réglages').last);
+    await _attendre(t, 500);
+    rangerCleVerrou(t.element(find.byType(EcranReglages)));
+    await _attendre(t, 800);
+    await t.enterText(find.byType(TextField).first, secoursDemo);
+    await _attendre(t, 400);
+    await expectLater(find.byType(CyberSAS), matchesGoldenFile('captures/telephone-secours-coller.png'));
   });
 
   // Les invitations en cours, ouvertes depuis l'écran d'ajout.

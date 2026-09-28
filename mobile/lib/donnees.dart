@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:clock/clock.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -314,6 +315,41 @@ class Demande {
 /// Rendu par une opération dont l'utilisateur a fermé l'invite d'empreinte :
 /// rien à afficher, on revient simplement.
 const operationAnnulee = '';
+
+/// Le début d'une sauvegarde de secours de la clé du verrou (voir
+/// internal/verrou/secours.go).
+const prefixeSecours = 'cybersas-secours-';
+
+/// Une vraie sauvegarde, faite par le moteur pour la démo : chiffrée par
+/// [phraseDemo], elle contient une clé de verrou tirée au hasard, qui ne
+/// sert nulle part.
+const secoursDemo = 'cybersas-secours-1:AQABAAADBHs26TJ695nuJR7_KEaL8NBsC5IypPXHJlK65CI4Sid8sKtJeVziYn1Muvx_loDO4SxS3PMBBAe9'
+    'GwZcV1_L5hKvfWKPMvvROVWZMWb3YfzT3FtuN9STTCbC9mBQnu7I5d1GhVmiArCed0vym0Eu_B6wO4IjK_4sCQ';
+const phraseDemo = 'phrase de la démo CyberSAS';
+
+/// La phrase de passe la plus courte acceptée, comme verrou.PhraseMin.
+const phraseMin = 12;
+
+/// Le texte ressemble à une sauvegarde de secours : on demandera sa phrase.
+bool estSecours(String texte) => texte.trim().startsWith(prefixeSecours);
+
+/// L'empreinte du verrou qu'une sauvegarde annonce dans son en-tête, lue
+/// sans la phrase (comme pont.EmpreinteSecours) ; null si elle est
+/// illisible. Sert à la reconnaître, pas à la croire : seul le moteur
+/// vérifie, en l'ouvrant.
+String? empreinteSecours(String texte) {
+  final s = texte.replaceAll(RegExp(r'\s'), '');
+  if (!s.startsWith('${prefixeSecours}1:')) return null;
+  try {
+    final b = base64Url.decode(base64Url.normalize(s.substring(prefixeSecours.length + 2)));
+    // Version, mémoire, passes, voies, sel et nonce, puis la clé publique.
+    if (b.length != 127 || b[0] != 1) return null;
+    final e = base64.encode(sha256.convert(b.sublist(47, 79)).bytes).substring(0, 12);
+    return '${e.substring(0, 4)}-${e.substring(4, 8)}-${e.substring(8, 12)}';
+  } on FormatException {
+    return null;
+  }
+}
 
 class CodeInvitation {
   CodeInvitation(this.serveur) : code = _code(), expire = clock.now().add(const Duration(minutes: 10));
@@ -1080,11 +1116,17 @@ class Reseau extends ChangeNotifier {
   bool cleVerrouPresente = false;
 
   /// Range la clé du verrou collée par l'admin : Android la vérifie, puis
-  /// demande l'empreinte qui autorise le rangement. Rend l'erreur à
-  /// afficher, [operationAnnulee], ou null.
-  Future<String?> importerVerrou(String graine) async {
+  /// demande l'empreinte qui autorise le rangement. Une sauvegarde de
+  /// secours est d'abord ouverte par le moteur avec sa [phrase]. Dans la
+  /// démo, rien n'est rangé. Rend l'erreur à afficher, [operationAnnulee],
+  /// ou null.
+  Future<String?> importerVerrou(String graine, {String phrase = ''}) async {
+    if (!reel) {
+      if (estSecours(graine) && phrase != phraseDemo) return 'Phrase de passe fausse, ou sauvegarde modifiée';
+      return null;
+    }
     try {
-      await Moteur.rangerVerrou(graine, titre: 'Ranger la clé du verrou');
+      await Moteur.rangerVerrou(graine, titre: 'Ranger la clé du verrou', phrase: phrase);
     } on ErreurMoteur catch (e) {
       return _erreurCoffre(e);
     }
@@ -1097,6 +1139,26 @@ class Reseau extends ChangeNotifier {
     await Moteur.effacerVerrou();
     cleVerrouPresente = false;
     notifyListeners();
+  }
+
+  /// L'empreinte du verrou de ce réseau, telle que l'inscription l'a
+  /// retenue. Dans la démo, celle de [secoursDemo].
+  String get empreinteVerrou => reel ? cleVerrou : 'Klmd-fqOO-8Kzi';
+
+  /// La sauvegarde de secours de la clé du verrou, chiffrée par [phrase].
+  /// L'invite d'empreinte ouvre le coffre pour cette seule opération, et
+  /// seul le texte chiffré revient jusqu'ici. Dans la démo, [secoursDemo].
+  /// Rend le texte, ou l'erreur ([operationAnnulee] si l'invite a été
+  /// fermée).
+  Future<({String? texte, String? erreur})> sauvegarderVerrou(String phrase) async {
+    if (!reel) return (texte: secoursDemo, erreur: null);
+    try {
+      final t = await Moteur.sauverVerrou(phrase,
+          titre: 'Sauvegarde de secours', detail: 'Verrou $empreinteVerrou : sa clé sera chiffrée par ta phrase de passe.');
+      return (texte: t, erreur: null);
+    } on ErreurMoteur catch (e) {
+      return (texte: null, erreur: _erreurCoffre(e));
+    }
   }
 
   /// Les appareils qui attendent une signature, pour l'admin : ceux que le

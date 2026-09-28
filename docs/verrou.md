@@ -111,7 +111,34 @@ La liste est numérotée : les appareils gardent la plus récente vue, et n'acce
 
 <img src="schemas/verrou/perte.png" alt="Perdue : il faut en créer une nouvelle et réinscrire tous les appareils avec --oublier, puisqu'ils refusent tout changement de verrou ; le téléphone seul, sans copie, gèle toute signature. Volée : même chose, et vite, car le voleur peut signer ce qu'il veut tant que les appareils font confiance à l'ancienne ; sur le téléphone, il lui faudrait d'abord le doigt de l'admin." width="100%">
 
-C'est pour cela qu'un secours pour la clé du verrou est dans la feuille de route : en attendant, garder une copie chiffrée hors ligne du fichier de l'ordinateur.
+D'où [la sauvegarde de secours](#la-sauvegarde-de-secours) : faite une fois, elle ramène la perte du téléphone à un simple contretemps.
+
+<a name="la-sauvegarde-de-secours"></a>
+<img src="sections/verrou/s09.png" alt="09 La sauvegarde de secours" width="100%">
+
+Un court texte, `cybersas-secours-1:…`, qui contient la clé du verrou chiffrée par une phrase de passe. Il tient dans un gestionnaire de mots de passe, un fichier sur une clé USB ou une feuille au coffre. Avec lui et sa phrase, on range la clé sur le téléphone suivant, et le réseau ne voit pas la différence.
+
+<img src="schemas/verrou/secours.png" alt="La sauvegarde de secours, 127 octets en base64 : la version (1 octet), les paramètres d'Argon2id, mémoire (4), passes (1) et voies (1), le sel (16), le nonce (24), la clé publique du verrou en clair (32), puis la graine chiffrée (32) et son étiquette (16)." width="100%">
+
+- **La phrase devient une clé par Argon2id** : 64 Mio de mémoire, 3 passes, 4 voies, la seconde recommandation de la RFC 9106, faite pour les appareils à la mémoire comptée. Chaque essai coûte de l'ordre d'une seconde sur un téléphone, à l'admin comme à qui a volé le texte. Le sel est tiré au hasard à chaque sauvegarde.
+- **Chiffrée et authentifiée par XChaCha20-Poly1305.** L'en-tête reste lisible, pour reconnaître la sauvegarde à l'empreinte du verrou avant de taper la phrase, mais il est authentifié avec le reste : un octet changé, où que ce soit, et rien ne s'ouvre. Une fois ouverte, la clé doit redonner la clé publique annoncée.
+- **Des paramètres bornés.** Ils sont lus avant toute vérification : au-delà de 256 Mio ou de 16 passes, la sauvegarde est refusée sans rien calculer. Un fichier forgé ne fait pas tomber l'appli.
+- **Une phrase de 12 caractères au moins.** Quelques mots pris au hasard valent mieux qu'un mot compliqué.
+
+**Depuis le téléphone** : Réglages, Sauvegarde de secours. La phrase deux fois, l'empreinte du doigt qui ouvre le coffre pour cette seule opération, puis Partager ; seul le texte chiffré sort du moteur. **Pour restaurer**, Réglages, Clé du verrou : on y colle la sauvegarde au lieu de la clé, l'appli montre l'empreinte du verrou qu'elle annonce et demande sa phrase. Une sauvegarde d'un autre réseau est refusée.
+
+**Depuis l'ordinateur**, la phrase est demandée sans écho :
+
+```bash
+sas verrou secours --fichier ~/.cybersas/verrou > secours.txt
+sas verrou restaurer --fichier ~/.cybersas/verrou --secours secours.txt
+```
+
+`sas verrou restaurer` vérifie que la sauvegarde redonne la clé du fichier ; si le fichier n'existe plus, il le recrée, sans jamais en remplacer un. Dans le labo : `sas.sh secours` écrit `etat/verrou/secours.txt`, `sas.sh secours verifier` l'essaie, `sas.sh secours restaurer` recrée `etat/verrou/cle`.
+
+<img src="schemas/verrou/secours-limites.png" alt="Ce qu'elle protège : le téléphone perdu, cassé ou remis à zéro ; la sauvegarde et sa phrase redonnent la clé, sans réinscrire personne ; modifiée d'un seul octet, elle ne s'ouvre plus. Ce qu'elle ne protège pas : une phrase faible, car qui vole le texte essaie des phrases chez lui, sans limite, et Argon2id ne fait que le ralentir ; une phrase oubliée, que rien ne retrouve ; le texte et sa phrase ensemble valent la clé." width="100%">
+
+Une sauvegarde vérifiée juste après l'avoir rangée évite la mauvaise surprise le jour où l'on en a besoin. Et la phrase ne se range jamais au même endroit que le texte.
 
 <br>
 

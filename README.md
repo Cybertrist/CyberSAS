@@ -8,7 +8,7 @@
 
 Mon propre VPN, de bout en bout : le protocole du tunnel, le serveur, les applis. Il n'ouvre aucun port à la maison, son serveur relaie des paquets qu'il ne peut pas lire, et c'est le téléphone de l'admin, avec son doigt, qui décide qui entre.
 
-> **En cours.** Le serveur, le tunnel et le client Linux tournent dans le labo et passent leurs vérifications. L'appli Android ouvre un vrai tunnel sur le Fold, on la rejoint avec son compte Google, et l'admin gère le réseau depuis son téléphone. Voir [la feuille de route](#la-feuille-de-route).
+> **En cours.** Le serveur, le tunnel et le client Linux tournent dans le labo et passent leurs vérifications. L'appli Android ouvre un vrai tunnel sur le Fold, on la rejoint avec son compte Google, et l'admin gère le réseau et l'équipe depuis son téléphone. Voir [la feuille de route](#la-feuille-de-route).
 
 <img src="docs/schemas/tunnel.svg" alt="Le tunnel du logo de CyberSAS, animé comme dans l'appli : il s'allume couche par couche, les paquets entrent, puis il s'éteint. À gauche : Noise IK, puis ChaCha20-Poly1305, clés renouvelées toutes les deux minutes. À droite, l'état : coupé, connexion, connecté, coupure." width="100%">
 
@@ -26,13 +26,15 @@ Ce n'est pas un VPN pour naviguer caché : il relie tes appareils entre eux. Ta 
 
 Sur le téléphone, une barre flottante en bas, et le tunnel du logo qui s'allume et s'éteint avec l'interrupteur.
 
-<img src="docs/schemas/captures-telephone.png" alt="Huit écrans sur téléphone. Rejoindre : coller le lien d'invitation de l'admin, ou continuer avec Google. L'accueil : le tunnel animé et l'interrupteur. Tunnel coupé : le logo n'est plus qu'un fantôme bleu nuit. Les appareils : la carte du réseau et les demandes à signer. Inviter : un lien à usage unique à partager. Un appareil : son nom sur le réseau, ses ports, son certificat, l'empreinte de sa clé, et Révoquer. Les demandes : l'empreinte, puis ce qui sera signé, adresse, groupe et 90 jours, puis le doigt. Les réglages : renommer, verrouiller l'appli, masquer l'écran, la clé du verrou." width="100%">
+<img src="docs/schemas/captures-telephone.png" alt="Douze écrans sur téléphone. Rejoindre : coller le lien d'invitation de l'admin, ou continuer avec Google. L'accueil : le tunnel animé et l'interrupteur. Tunnel coupé : le logo n'est plus qu'un fantôme bleu nuit. Les appareils : la carte du réseau et les demandes à signer. Inviter : un lien à usage unique à partager. Un appareil : son nom sur le réseau, ses ports tirés de la politique signée, son certificat, l'empreinte de sa clé, Ouvrir dans le navigateur et Révoquer. Les demandes : l'empreinte, puis ce qui sera signé, adresse, groupe et 90 jours, puis le doigt. Les réglages : renommer, verrouiller l'appli, masquer l'écran, la clé du verrou, et l'équipe pour l'admin. Les invitations en cours : pour qui, jusqu'à quand, et Annuler. L'équipe : les comptes Google et leur groupe. Ajouter un membre : son adresse et son groupe, puis le doigt. Un membre : changer son groupe, ou le retirer de l'équipe." width="100%">
 
 Sur le Fold déplié, un rail à gauche. Toucher un appareil fait glisser la liste à gauche et ouvre son détail à droite.
 
 <img src="docs/schemas/captures-deplie.png" alt="Quatre écrans sur le Fold déplié. L'accueil : le tunnel à gauche, l'appareil et le réseau à droite. La carte du réseau en grand à gauche avec les demandes, les machines à droite. Toucher un appareil fait glisser la liste à gauche et ouvre son détail à droite. Les réglages en deux colonnes." width="100%">
 
 L'appli vit dans le dossier `mobile/`. Elle embarque le moteur Go du tunnel (`pont/`) et passe par le service VPN d'Android. Les captures ci-dessus viennent de son mode démo, sur un réseau d'exemple.
+
+Les ports ouverts d'un appareil se déduisent de la politique signée, celle que le tunnel applique. Quand le 80 ou le 443 en fait partie, un bouton ouvre son service dans le navigateur. Les cibles à toucher font au moins 48 dp, et les écrans tiennent jusqu'à une police une fois et demie plus grande.
 
 <img src="docs/sections/s03.png" alt="03 Comment ça marche" width="100%">
 
@@ -141,7 +143,7 @@ Pour aller plus loin, quatre documents, dessinés comme ce README :
 <a name="la-feuille-de-route"></a>
 <img src="docs/sections/s10.png" alt="10 La feuille de route" width="100%">
 
-<img src="docs/schemas/feuille.png" alt="La feuille de route. Fait : le tunnel, le serveur et le verrou, 79 tests Go, 8 cibles de fuzzing et 18 vérifications de bout en bout ; trois audits ; l'appli Android avec le vrai tunnel ; l'admin depuis le téléphone, signer, refuser, inviter, renommer, retirer, révoquer ; la connexion Google dans l'appli. À venir : l'équipe depuis l'appli ; le serveur en ligne, d'abord à la maison puis sur un VPS ; un secours pour la clé du verrou. À discuter : l'appli Windows ; un site vitrine et une console web qui ne peut pas signer." width="100%">
+<img src="docs/schemas/feuille.png" alt="La feuille de route. Fait : le tunnel, le serveur et le verrou, 79 tests Go, 8 cibles de fuzzing et 18 vérifications de bout en bout ; trois audits ; l'appli Android avec le vrai tunnel ; l'admin depuis le téléphone, signer, refuser, inviter, renommer, retirer, révoquer ; la connexion Google dans l'appli ; l'équipe depuis l'appli, ajouter, changer de groupe, retirer, avec toujours un admin, et les invitations en cours qu'on annule ; une appli juste et lisible, les ports tirés de la politique signée, des cibles de 48 dp et les grandes polices. À venir : le serveur en ligne, d'abord à la maison puis sur un VPS ; un secours pour la clé du verrou. À discuter : l'appli Windows ; un site vitrine et une console web qui ne peut pas signer." width="100%">
 
 Les figures de ce README sont dessinées par les scripts de `docs/tools` : aucune ne sort d'un logiciel de dessin, et chaque animation est vérifiée image par image avant d'être publiée.
 

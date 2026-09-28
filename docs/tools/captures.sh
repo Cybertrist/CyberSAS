@@ -34,9 +34,13 @@ $(ecran telephone telephone-accueil 'L’accueil' 'Le tunnel du logo, animé, et
 $(ecran telephone telephone-accueil-eteint 'Tunnel coupé' 'Le logo s’éteint jusqu’à n’être plus qu’un fantôme bleu nuit.')
 $(ecran telephone telephone-appareils 'Les appareils' 'La carte du réseau, qui est en ligne, les demandes à signer.')
 $(ecran telephone telephone-ajout 'Inviter' 'Un lien à usage unique, à partager au nouvel appareil.')
-$(ecran telephone telephone-detail 'Un appareil' 'Son nom sur le réseau, ses ports, son certificat et l’empreinte de sa clé.')
+$(ecran telephone telephone-detail 'Un appareil' 'Son nom sur le réseau, ses ports tirés de la politique signée, son certificat, l’empreinte de sa clé.')
 $(ecran telephone telephone-demandes 'Les demandes' 'L’empreinte, puis ce qui sera signé : adresse, groupe, 90 jours. Le doigt, enfin.')
-$(ecran telephone telephone-reglages 'Les réglages' 'Renommer l’appareil, verrouiller l’appli, masquer l’écran.')
+$(ecran telephone telephone-reglages 'Les réglages' 'Renommer l’appareil, verrouiller l’appli, masquer l’écran. Et l’équipe, pour l’admin.')
+$(ecran telephone telephone-invitations 'Les invitations en cours' 'Celles qui n’ont pas encore servi, pour qui et jusqu’à quand. Annulée, une invitation ne fait plus entrer personne.')
+$(ecran telephone telephone-equipe 'L’équipe' 'Les comptes Google qui peuvent rejoindre le réseau, chacun dans son groupe.')
+$(ecran telephone telephone-equipe-ajout 'Ajouter un membre' 'Son adresse Google et son groupe, puis le doigt. Ses appareils devront encore être signés.')
+$(ecran telephone telephone-equipe-membre 'Un membre' 'Changer son groupe ou le retirer de l’équipe, ce qui coupe tous ses appareils.')
 </div>
 HTML
 pied; } > "$D/html/captures-telephone.html"

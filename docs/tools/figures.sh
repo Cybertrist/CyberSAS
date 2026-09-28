@@ -95,7 +95,7 @@ etape () {
 { entete 1280; cat <<HTML
 <style>
 .w{padding:24px 56px;display:flex;flex-direction:column;gap:10px;position:relative}
-.w:before{content:'';position:absolute;left:79px;top:40px;bottom:40px;width:2px;background:linear-gradient(#3DDC97,#3DDC97 44%,#31E7FD 52%,#2A333D 64%)}
+.w:before{content:'';position:absolute;left:79px;top:40px;bottom:40px;width:2px;background:linear-gradient(#3DDC97,#3DDC97 60%,#2A333D 70%)}
 .e{display:flex;align-items:center;gap:22px;position:relative}
 .e i{width:48px;height:48px;flex-shrink:0;border-radius:50%;background:#0D1117;border:2px solid var(--a);box-shadow:0 0 18px color-mix(in srgb,var(--a) 40%,transparent);position:relative;z-index:1}
 .e i:after{content:'';position:absolute;inset:14px;border-radius:50%;background:var(--a)}
@@ -112,7 +112,8 @@ $(etape fait 'Trois audits' '46 constats de trois relecteurs et d’une revue de
 $(etape fait 'L’appli Android, avec le vrai tunnel' 'Le moteur Go embarqué et le service VPN d’Android : sur le Fold, l’interrupteur ouvre un vrai tunnel vers le labo.')
 $(etape fait 'L’admin depuis le téléphone' 'Signer une demande, refuser, inviter par un lien, renommer, retirer, révoquer. La clé du verrou dort dans la puce, une empreinte par signature.')
 $(etape fait 'La connexion Google dans l’appli' 'Le lien du réseau, puis l’invite native d’Android : un compte de l’équipe, une touche. Le serveur vérifie le jeton, l’admin signe.')
-$(etape venir 'L’équipe depuis l’appli' 'Ajouter ou retirer un membre de l’équipe sans ligne de commande.')
+$(etape fait 'L’équipe depuis l’appli' 'Ajouter un compte Google, changer son groupe, le retirer, chaque fois avec le doigt ; le serveur garde toujours un admin. Les invitations qui n’ont pas servi se voient et s’annulent.')
+$(etape fait 'Une appli juste, et lisible par tous' 'Les ports ouverts et le bouton Ouvrir dans le navigateur se déduisent de la politique signée. Des cibles de 48 dp, et des écrans qui tiennent jusqu’à une police une fois et demie plus grande.')
 $(etape venir 'Le serveur en ligne' 'D’abord sur un ordinateur à la maison pour les essais, puis sur un VPS avec un certificat Let’s Encrypt et une nouvelle clé du verrou.')
 $(etape venir 'Un secours pour la clé du verrou' 'Perdre le téléphone de l’admin ne doit pas geler le réseau : une seconde clé, gardée hors ligne.')
 $(etape discuter 'L’appli Windows' 'Le moteur tourne déjà sur PC ; il manque le pilote réseau et l’interface.')

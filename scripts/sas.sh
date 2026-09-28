@@ -45,6 +45,8 @@ cd "$RACINE"
 # Relatif : openssl sous Git Bash ne lit pas les chemins /c/...
 ETAT="etat"
 EQUIPE="$ETAT/equipe/equipe.txt"
+EMAILS="$ETAT/equipe/emails.txt"
+VERROU_EQUIPE="$ETAT/equipe/.verrou"
 GOOGLE="$ETAT/secrets/google"
 VERROU="$ETAT/verrou"
 LABO=(docker compose -f labo/maison.yaml)
@@ -152,16 +154,118 @@ init_verrou () {
 # peuvent écrire. D'où 0733 (écrire et traverser, pas lister) ; etat/,
 # en 0700, ferme tout de même ce dossier aux autres comptes de l'hôte.
 # Les fichiers qu'il écrit sont en 0644, pour que ce script les relise.
+#
+# Pour ce script, tout ce qui est dans ce dossier vient donc peut-être
+# d'un sasd piraté : un equipe.txt en lien symbolique vers
+# ~/.ssh/id_ed25519, un fichier temporaire posé d'avance en lien vers
+# ~/.bashrc. D'où trois règles :
+#   - rien n'y est écrit en place : chaque fichier s'écrit dans etat/,
+#     où sasd n'entre pas (temporaire), puis y est renommé (mv -T, qui
+#     remplace un lien sans le suivre et refuse un dossier) ;
+#   - rien n'y est lu directement : lire_equipe refuse un lien, ou ce
+#     qui n'est pas un fichier ordinaire, et ne lit que le fichier qu'il
+#     a vérifié ;
+#   - un verrou de fichier, que sasd prend aussi, empêche l'un d'effacer
+#     le changement de l'autre (verrouiller_equipe).
+#
+# Pas de sticky bit (1733) : il interdirait à sasd, qui n'a pas
+# CAP_FOWNER, de remplacer un equipe.txt renommé ici par ce script (il
+# appartient à notre utilisateur), et l'appli ne pourrait plus changer
+# l'équipe. Plus solide encore : faire tourner sasd sous un uid à lui, et
+# ouvrir ce dossier à son seul groupe (0770) plutôt qu'à « tous ». Mais
+# sasd a besoin de ses capacités (tun, nftables), que Docker ne donne
+# qu'au root du conteneur (voir le Dockerfile) : cela passe par le
+# remappage des utilisateurs de Docker (userns-remap), un réglage du
+# démon, hors de ce script.
 dossier_equipe () {
   mkdir -p "$ETAT/equipe"
+  # Le 0733 ci-dessous ne protège que si etat/ reste fermé aux autres.
+  chmod 700 "$ETAT"
   chmod 733 "$ETAT/equipe"
+  fichier_ordinaire "$EQUIPE"
+  fichier_ordinaire "$EMAILS"
   # Avant, la liste était dans etat/equipe.txt, recopiée pour sasd : on
   # la déplace une fois, et l'on efface les anciennes copies.
-  if [ -f "$ETAT/equipe.txt" ] && [ ! -f "$EQUIPE" ]; then mv "$ETAT/equipe.txt" "$EQUIPE"; fi
+  if [ -f "$ETAT/equipe.txt" ] && [ ! -e "$EQUIPE" ]; then mv -f -T "$ETAT/equipe.txt" "$EQUIPE"; fi
   rm -f "$ETAT/sasd/equipe.txt" "$ETAT/oauth2-proxy/emails.txt"
-  # Pas de touch : un fichier réécrit par sasd appartient à root.
-  [ -f "$EQUIPE" ] || : > "$EQUIPE"
+  # Pas de touch : un fichier réécrit par sasd appartient à root. Et,
+  # comme tout ici, créé à côté puis renommé.
+  if [ ! -e "$EQUIPE" ]; then local t; t="$(temporaire)"; mv -f -T "$t" "$EQUIPE"; fi
 }
+
+# temporaire : un fichier neuf dans etat/, hors de portée de sasd.
+temporaire () { mktemp "$ETAT/.equipe.XXXXXX"; }
+
+# fichier_ordinaire : un fichier de etat/equipe doit être absent ou un
+# fichier ordinaire. Un lien symbolique, un dossier ou un tube, c'est que
+# sasd a été piraté : on s'arrête avant d'y toucher.
+fichier_ordinaire () {
+  if [ -L "$1" ] || { [ -e "$1" ] && [ ! -f "$1" ]; }; then
+    meurt "$1 n'est pas un fichier ordinaire (lien symbolique ?) : refusé. sasd a peut-être été piraté, voir docs/menaces.md"
+  fi
+}
+
+# meme_fichier <chemin> <fd> : le descripteur ouvert est bien ce chemin-là,
+# un fichier ordinaire, et pas ce que désignait un lien posé entre la
+# vérification et l'ouverture.
+meme_fichier () {
+  local ici ouvert
+  ici="$(stat -c '%d:%i:%F' -- "$1" 2>/dev/null)" || return 1
+  ouvert="$(stat -L -c '%d:%i:%F' "/dev/fd/$2" 2>/dev/null)" || return 1
+  [ "$ici" = "$ouvert" ] && [[ "$ici" == *"regular"* ]]
+}
+
+# lire_equipe <copie> : recopie equipe.txt dans <copie>, un fichier de
+# etat/. Le reste du script ne lit que cette copie.
+lire_equipe () {
+  fichier_ordinaire "$EQUIPE"
+  fichier_ordinaire "$EMAILS"
+  if [ ! -e "$EQUIPE" ]; then : > "$1"; return; fi
+  exec 3< "$EQUIPE" || meurt "$EQUIPE illisible"
+  if ! meme_fichier "$EQUIPE" 3; then
+    exec 3<&-
+    meurt "$EQUIPE a changé de nature pendant sa lecture (lien symbolique ?) : refusé"
+  fi
+  cat <&3 > "$1"
+  exec 3<&-
+}
+
+# a_une_ligne <adresse> <fichier> : la même lecture que sasd (adresse en
+# minuscules, groupe, # pour commenter).
+a_une_ligne () {
+  awk -v m="$1" 'NF >= 2 && $1 !~ /^#/ && tolower($1) == m {t = 1} END {exit !t}' "$2"
+}
+
+# dans_equipe <adresse> : la personne a une ligne dans equipe.txt.
+dans_equipe () {
+  local c r=0; c="$(temporaire)"
+  lire_equipe "$c"
+  a_une_ligne "${1,,}" "$c" || r=1
+  rm -f "$c"
+  return "$r"
+}
+
+# verrouiller_equipe : le verrou que sasd prend aussi avant de réécrire
+# l'équipe (flock sur etat/equipe/.verrou), tenu jusqu'à
+# deverrouiller_equipe. Ouvert en lecture seule, et seulement si c'est un
+# fichier ordinaire. Sans flock (Git Bash), pas de verrou : c'est le labo
+# sous Windows, où il ne traverserait de toute façon pas la machine
+# virtuelle de Docker.
+verrouiller_equipe () {
+  command -v flock >/dev/null || return 0
+  fichier_ordinaire "$VERROU_EQUIPE"
+  if [ ! -e "$VERROU_EQUIPE" ]; then
+    # ln ne suit pas un lien, et échoue si le fichier est apparu entre-temps.
+    local t; t="$(temporaire)"
+    ln -T "$t" "$VERROU_EQUIPE" 2>/dev/null || true
+    rm -f "$t"
+    fichier_ordinaire "$VERROU_EQUIPE"
+  fi
+  exec 9< "$VERROU_EQUIPE" || meurt "$VERROU_EQUIPE illisible"
+  meme_fichier "$VERROU_EQUIPE" 9 || meurt "$VERROU_EQUIPE a changé de nature (lien symbolique ?) : refusé"
+  flock -w 10 9 || meurt "l'équipe est en cours de modification (depuis l'appli ?) : réessayer"
+}
+deverrouiller_equipe () { exec 9<&-; }
 
 # Écrit les configurations de etat/ à partir des modèles et de equipe.txt.
 # sasd relit les siennes toutes les cinq secondes, oauth2-proxy surveille
@@ -170,14 +274,22 @@ rendre () {
   mkdir -p "$ETAT/sasd" "$ETAT/oauth2-proxy"
   dossier_equipe
   local id; id="$(cat "$GOOGLE/client_id")"
+  local copie emails; copie="$(temporaire)"; emails="$(temporaire)"
+  verrouiller_equipe
+  lire_equipe "$copie"
   # Le poste d'essai du labo s'inscrit avec une clé, sans compte Google.
   # Il est écrit dans la liste elle-même : sasd la réécrit, il ne doit
-  # pas l'y perdre. Toujours à côté puis renommé (voir dossier_equipe).
-  if [ "$TLS" = labo ] && ! grep -q '^essai@labo\.local '"$EQUIPE"; then
-    { cat "$EQUIPE"; echo "essai@labo.local equipe"; } > "$EQUIPE.tmp" && mv "$EQUIPE.tmp" "$EQUIPE"
+  # pas l'y perdre. equipe.txt d'abord, puis la liste web qui en découle.
+  if [ "$TLS" = labo ] && ! grep -q '^essai@labo\.local ' "$copie"; then
+    echo "essai@labo.local equipe" >> "$copie"
+    awk 'NF>=2 && $1 !~ /^#/ {print $1}' "$copie" > "$emails"
+    mv -f -T "$copie" "$EQUIPE"
+  else
+    awk 'NF>=2 && $1 !~ /^#/ {print $1}' "$copie" > "$emails"
+    rm -f "$copie"
   fi
-  awk 'NF>=2 && $1 !~ /^#/ {print $1}' "$EQUIPE" > "$ETAT/equipe/emails.txt.tmp"
-  mv "$ETAT/equipe/emails.txt.tmp" "$ETAT/equipe/emails.txt"
+  mv -f -T "$emails" "$EMAILS"
+  deverrouiller_equipe
   printf '%s\n' "$id" > "$ETAT/sasd/clients_google"
   cp "$VERROU/publique" "$ETAT/sasd/verrou.pub"
   sed -e "s|@DOMAINE@|$DOMAINE|g" -e "s|@GOOGLE_CLIENT_ID@|$id|g" oauth2-proxy/oauth2-proxy.cfg > "$ETAT/oauth2-proxy/oauth2-proxy.cfg"
@@ -195,9 +307,17 @@ cmd_init () {
   init_verrou
   dit "Accès"
   dossier_equipe
-  if [ ! -s "$EQUIPE" ] && [ -n "${ADMIN_EMAIL:-}" ]; then
-    printf '# adresse Google        groupe (admins ou equipe)\n%s admins\n' "$ADMIN_EMAIL" > "$EQUIPE"
-    ok "$ADMIN_EMAIL admin"
+  if [ -n "${ADMIN_EMAIL:-}" ]; then
+    local copie; copie="$(temporaire)"
+    verrouiller_equipe
+    lire_equipe "$copie"
+    if [ ! -s "$copie" ]; then
+      printf '# adresse Google        groupe (admins ou equipe)\n%s admins\n' "$ADMIN_EMAIL" > "$copie"
+      mv -f -T "$copie" "$EQUIPE"
+      ok "$ADMIN_EMAIL admin"
+    fi
+    deverrouiller_equipe
+    rm -f "$copie"
   fi
   rendre
   ok "configurations écrites dans etat/"
@@ -231,7 +351,7 @@ cmd_google () {
 cmd_invitation () {
   [ $# -ge 1 ] || meurt "usage : sas.sh invitation <adresse google> [durée, 10m par défaut]"
   local mail="$1" duree="${2:-10m}" cle verrou="" lien
-  grep -qF -- "$mail " "$EQUIPE" 2>/dev/null || meurt "$mail n'est pas dans l'équipe : sas.sh membre $mail equipe"
+  dans_equipe "$mail" || meurt "$mail n'est pas dans l'équipe : sas.sh membre $mail equipe"
   cle="$(sasd cle --utilisateur "$mail" --duree "$duree" | tr -d '\r')"
   [ -n "$cle" ] || meurt "pas de clé d'inscription"
   [ -f "$VERROU/publique" ] && verrou="$(tr -d '\r\n' < "$VERROU/publique")"
@@ -252,14 +372,38 @@ cmd_annuler () {
 # url : encode ce qui ne passe pas tel quel dans un lien (base64 surtout).
 url () { printf '%s' "$1" | sed 's/%/%25/g; s/+/%2B/g; s#/#%2F#g; s/=/%3D/g; s/:/%3A/g'; }
 
+# changer_equipe <adresse> <groupe> : met la personne dans ce groupe, ou
+# la retire (groupe vide). Le nouveau fichier est écrit en entier, puis
+# renommé d'un coup : sasd, qui relit l'équipe toutes les cinq secondes,
+# ne voit jamais un état où la personne manque, et ne purge pas ses
+# appareils pour un simple changement de groupe. Échoue si l'on retire
+# quelqu'un qui n'y est pas.
+changer_equipe () {
+  local mail="$1" groupe="$2" copie nouvelle r=0
+  copie="$(temporaire)"; nouvelle="$(temporaire)"
+  verrouiller_equipe
+  lire_equipe "$copie"
+  if [ -z "$groupe" ] && ! a_une_ligne "$mail" "$copie"; then
+    r=1
+  else
+    {
+      awk -v m="$mail" '!(NF >= 2 && $1 !~ /^#/ && tolower($1) == m)' "$copie"
+      [ -z "$groupe" ] || printf '%s %s\n' "$mail" "$groupe"
+    } > "$nouvelle"
+    mv -f -T "$nouvelle" "$EQUIPE" || meurt "équipe non enregistrée"
+  fi
+  deverrouiller_equipe
+  rm -f "$copie" "$nouvelle"
+  return "$r"
+}
+
 cmd_membre () {
   [ $# -eq 2 ] || meurt "usage : sas.sh membre <adresse google> <admins|equipe>"
   local mail="${1,,}" groupe="$2"
   case "$groupe" in admins|equipe) ;; *) meurt "groupe inconnu : $groupe (admins ou equipe)";; esac
   [[ "$mail" =~ ^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]+$ ]] || meurt "adresse invalide : $mail"
   dossier_equipe
-  awk -v m="$mail" '$1 != m' "$EQUIPE" > "$EQUIPE.tmp" && mv "$EQUIPE.tmp" "$EQUIPE"
-  printf '%s %s\n' "$mail" "$groupe" >> "$EQUIPE"
+  changer_equipe "$mail" "$groupe"
   rendre
   ok "$mail : $groupe, pris en compte d'ici cinq secondes"
 }
@@ -267,8 +411,8 @@ cmd_membre () {
 cmd_retirer () {
   [ $# -eq 1 ] || meurt "usage : sas.sh retirer <adresse google>"
   local mail="${1,,}"
-  grep -qF -- "$mail " "$EQUIPE" 2>/dev/null || meurt "$mail n'est pas dans l'équipe"
-  awk -v m="$mail" '$1 != m' "$EQUIPE" > "$EQUIPE.tmp" && mv "$EQUIPE.tmp" "$EQUIPE"
+  dossier_equipe
+  changer_equipe "$mail" "" || meurt "$mail n'est pas dans l'équipe"
   rendre
   # sasd purge lui-même les appareils d'une personne sortie de l'équipe.
   ok "$mail retiré : ses appareils sont coupés d'ici cinq secondes"

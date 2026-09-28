@@ -273,7 +273,13 @@ class _Ligne extends StatelessWidget {
                   if (!a.signe) ...[const SizedBox(width: 7), const Puce('NON SIGNÉ', couleur: Couleurs.rouge, fond: false)],
                 ]),
                 const SizedBox(height: 3),
-                Text(a.adresse, style: mono(12.5, graisse: 400, couleur: Couleurs.etiquette)),
+                // En grande police, l'adresse se réduit au lieu de se couper
+                // en deux lignes.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(a.adresse, style: mono(12.5, graisse: 400, couleur: Couleurs.etiquette)),
+                ),
               ]),
             ),
             // Dans la liste, seulement les ports TCP précis : « tout ouvert »

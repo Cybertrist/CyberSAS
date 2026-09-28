@@ -92,7 +92,7 @@ class _EcranVerrouState extends State<EcranVerrou> with SingleTickerProviderStat
                     child: Transform.translate(
                       offset: Offset(0, 14 * (1 - _phase(0.6, 0.95))),
                       child: Column(children: [
-                        const Marque(taille: 36),
+                        const FittedBox(fit: BoxFit.scaleDown, child: Marque(taille: 36)),
                         const SizedBox(height: 10),
                         Text('Relie tes appareils, chiffré de bout en bout.',
                             textAlign: TextAlign.center, style: texte(14, couleur: Couleurs.secondaire)),

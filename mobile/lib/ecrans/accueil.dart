@@ -100,7 +100,11 @@ class _Entete extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: grand ? 0 : 22),
         child: SizedBox(
           height: grand ? 38 : 36,
-          child: Align(alignment: Alignment.centerLeft, child: Marque(taille: grand ? 30 : 24)),
+          // Le logo ne grandit pas avec la police : il tient dans l'en-tête.
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(fit: BoxFit.scaleDown, child: Marque(taille: grand ? 30 : 24)),
+          ),
         ),
       );
 }
@@ -255,6 +259,7 @@ class _CarteAppareil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final moi = r.moi;
+    final grandePolice = MediaQuery.textScalerOf(context).scale(10) > 10;
     Widget garantie(Ico ico, Color c, String titre, String sous) => Row(children: [
           Icone(ico, couleur: c, taille: 19, lueur: true),
           const SizedBox(width: 10),
@@ -278,14 +283,24 @@ class _CarteAppareil extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(18, grand ? 16 : 13, 18, grand ? 14 : 11),
           decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Couleurs.separateur))),
           child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Etiquette('Adresse privée'),
-              const SizedBox(height: 5),
-              Text(moi.adresse, style: mono(grand ? 26 : 20)),
-            ]),
+            // Avec une grande police, l'adresse se réduit pour laisser au
+            // nom deux cinquièmes de la ligne.
+            Flexible(
+              flex: grandePolice ? 3 : 0,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Etiquette('Adresse privée'),
+                const SizedBox(height: 5),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(moi.adresse, style: mono(grand ? 26 : 20)),
+                ),
+              ]),
+            ),
             const SizedBox(width: 16),
             // Un nom long se coupe au lieu de sortir de la carte.
             Expanded(
+              flex: 2,
               child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 const Etiquette('Cet appareil'),
                 const SizedBox(height: 5),

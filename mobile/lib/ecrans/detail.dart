@@ -196,13 +196,15 @@ class _Identite extends StatelessWidget {
               ),
               if (r.peutRenommer(a)) ...[
                 const SizedBox(width: 6),
-                Semantics(
-                  button: true,
-                  label: 'Renommer',
-                  child: InkResponse(
-                    onTap: () => renommerAppareil(context, a),
-                    radius: 22,
-                    child: const Padding(padding: EdgeInsets.all(6), child: Icone(Ico.crayon, couleur: Couleurs.secondaire, taille: 18)),
+                ZoneTactile(
+                  child: Semantics(
+                    button: true,
+                    label: 'Renommer',
+                    child: InkResponse(
+                      onTap: () => renommerAppareil(context, a),
+                      radius: 22,
+                      child: const Padding(padding: EdgeInsets.all(6), child: Icone(Ico.crayon, couleur: Couleurs.secondaire, taille: 18)),
+                    ),
                   ),
                 ),
               ],

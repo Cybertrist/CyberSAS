@@ -13,7 +13,8 @@ import '../icones.dart';
 import '../moteur.dart';
 import '../theme.dart';
 
-/// Rejoindre un réseau. L'admin envoie un lien cybersas:// qui porte
+/// Rejoindre un réseau. L'admin envoie un lien (https://vpn.…/rejoindre#…,
+/// ou cybersas://rejoindre?…) qui porte
 /// l'adresse du serveur et la clé publique du verrou : une invitation, avec
 /// une clé d'inscription à usage unique, ou le lien du réseau, sans clé,
 /// où l'on se connecte ensuite avec son compte Google de l'équipe. Ouvert
@@ -70,7 +71,7 @@ class _EcranConnexionState extends State<EcranConnexion> {
     final i = Invitation.lire(d?.text ?? '');
     setState(() {
       _invitation = i;
-      _erreur = i == null ? "Ce n'est pas un lien CyberSAS : copie le lien cybersas:// en entier." : null;
+      _erreur = i == null ? "Ce n'est pas un lien CyberSAS : copie le lien de l'admin en entier." : null;
     });
   }
 
@@ -220,7 +221,7 @@ class _Explication extends StatelessWidget {
           Text("Il te faut le lien de l'admin", style: texte(16, graisse: 600)),
           const SizedBox(height: 8),
           Text(
-            "C'est un lien cybersas:// : le lien du réseau, avec lequel tu te connectes ensuite avec ton compte Google, "
+            "C'est un lien vers le serveur, en https : le lien du réseau, avec lequel tu te connectes ensuite avec ton compte Google, "
             "ou une invitation à usage unique. Ouvre-le sur ce téléphone, ou copie-le puis colle-le ici.",
             style: texte(13.5, couleur: Couleurs.secondaire, hauteur: 1.45),
           ),

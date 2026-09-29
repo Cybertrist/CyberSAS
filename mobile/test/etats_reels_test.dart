@@ -249,4 +249,50 @@ void main() {
     final invitation = Invitation.lire('cybersas://rejoindre?serveur=https%3A%2F%2Fvpn.exemple.fr&cle=sas-abc&verrou=DkF6TQ%3D');
     expect(invitation!.parGoogle, isFalse);
   });
+
+  test('lien https : tout dans le fragment, et sur l\'hôte du serveur annoncé', () {
+    const serveur = 'serveur=https%3A%2F%2Fvpn.exemple.fr';
+    final invitation = Invitation.lire(' https://vpn.exemple.fr/rejoindre#$serveur&cle=sas-abc&verrou=DkF6TQ%3D ');
+    expect(invitation, isNotNull);
+    expect(invitation!.serveur, 'https://vpn.exemple.fr');
+    expect(invitation.cle, 'sas-abc');
+    expect(invitation.verrou, 'DkF6TQ=');
+    expect(invitation.hote, 'vpn.exemple.fr');
+    final reseau = Invitation.lire('https://vpn.exemple.fr/rejoindre#$serveur&verrou=DkF6TQ%3D');
+    expect(reseau!.parGoogle, isTrue);
+    // L'autorité du labo passe aussi, en base64 dans le fragment.
+    final labo = Invitation.lire('https://vpn.exemple.fr/rejoindre#$serveur&cle=sas-abc&autorite=${Uri.encodeQueryComponent(base64.encode(utf8.encode('PEM')))}');
+    expect(labo!.autorite, 'PEM');
+    // L'hôte ne dépend pas de la casse ; un port doit être le même des deux côtés.
+    expect(Invitation.lire('https://VPN.Exemple.fr/rejoindre#$serveur&cle=sas-abc'), isNotNull);
+    expect(Invitation.lire('https://vpn.exemple.fr:8443/rejoindre#serveur=https%3A%2F%2Fvpn.exemple.fr%3A8443&cle=sas-abc'), isNotNull);
+
+    for (final piege in [
+      // Un autre hôte que celui du serveur annoncé.
+      'https://vpn.pirate.fr/rejoindre#$serveur&cle=sas-abc&verrou=DkF6TQ%3D',
+      'https://exemple.fr/rejoindre#$serveur&cle=sas-abc',
+      'https://vpn.exemple.fr.pirate.fr/rejoindre#$serveur&cle=sas-abc',
+      'https://vpn.exemple.fr@pirate.fr/rejoindre#$serveur&cle=sas-abc',
+      'https://vpn.exemple.fr:8443/rejoindre#$serveur&cle=sas-abc',
+      // Un identifiant caché avant l'hôte, dans le lien ou dans le serveur.
+      'https://moi@vpn.exemple.fr/rejoindre#$serveur&cle=sas-abc',
+      'https://vpn.exemple.fr/rejoindre#serveur=https%3A%2F%2Fmoi%40vpn.exemple.fr&cle=sas-abc',
+      // Les paramètres dans la requête, que le serveur verrait passer.
+      'https://vpn.exemple.fr/rejoindre?$serveur&cle=sas-abc&verrou=DkF6TQ%3D',
+      'https://vpn.exemple.fr/rejoindre?cle=sas-abc#$serveur&verrou=DkF6TQ%3D',
+      // Un autre chemin, pas de https, pas de fragment, un serveur en http.
+      'https://vpn.exemple.fr/autre#$serveur&cle=sas-abc',
+      'https://vpn.exemple.fr/rejoindre/#$serveur&cle=sas-abc',
+      'http://vpn.exemple.fr/rejoindre#$serveur&cle=sas-abc',
+      'https://vpn.exemple.fr/rejoindre',
+      'https://vpn.exemple.fr/rejoindre#serveur=http%3A%2F%2Fvpn.exemple.fr&cle=sas-abc',
+      // Sans clé ni verrou, une autorité illisible.
+      'https://vpn.exemple.fr/rejoindre#$serveur',
+      'https://vpn.exemple.fr/rejoindre#$serveur&cle=sas-abc&autorite=%%%',
+      'cybersas://autre?$serveur&cle=sas-abc',
+      'bonjour',
+    ]) {
+      expect(Invitation.lire(piege), isNull, reason: piege);
+    }
+  });
 }

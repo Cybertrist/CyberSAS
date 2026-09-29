@@ -68,7 +68,7 @@ grille "$DOCS/schemas/regles.png" 3 \
   "gpp_good|Signée par l'admin|La politique est signée par la clé du verrou : le serveur ne peut pas la changer sans que ça se voie."
 
 grille "$DOCS/schemas/equipe.png" 3 \
-  "person_add|Inviter|L'admin choisit un membre de l'équipe et une durée : 10 minutes, une heure ou un jour. L'appli partage un lien <code>cybersas://</code> à usage unique, qui porte la clé du verrou." \
+  "person_add|Inviter|L'admin choisit un membre de l'équipe et une durée : 10 minutes, une heure ou un jour. L'appli partage un lien <code>https://vpn…/rejoindre</code> à usage unique, qui ouvre l'appli d'un appui et porte la clé du verrou." \
   "draw|Signer|La demande arrive sur le téléphone de l'admin avec l'empreinte, l'adresse et le groupe. Il compare, puis signe avec son doigt. Si le serveur change un champ entre-temps, rien n'est signé." \
   "edit|Renommer|Chacun renomme ses appareils ; l'admin, tous. Le nom affiché ne fait pas partie du certificat : l'empreinte et l'adresse restent la référence." \
   "logout|Retirer|Un appareil dont on ne veut plus est coupé tout de suite. Retiré seulement, il pourrait se réinscrire." \

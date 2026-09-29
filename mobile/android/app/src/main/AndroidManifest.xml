@@ -34,11 +34,16 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Les liens d'invitation passent par le canal du moteur
+                 (MainActivity.lien, puis Invitation.lire), pas par le
+                 Navigator de Flutter, qui ne connaît pas « /rejoindre ». -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Les invitations : cybersas://rejoindre?serveur=…&cle=…&verrou=… -->
+            <!-- Les invitations : cybersas://rejoindre?serveur=…&cle=…&verrou=…
+                 La forme https (App Links) est dans src/liens/AndroidManifest.xml. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

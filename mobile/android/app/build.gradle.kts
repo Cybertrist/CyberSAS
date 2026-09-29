@@ -35,6 +35,31 @@ val definitions = (project.findProperty("dart-defines") as String?)
     ?: emptyList()
 val demo = "DEMO=true" in definitions
 
+// Les invitations en https (Android App Links) : https://vpn.<domaine>/rejoindre.
+// Android doit connaître l'hôte dès l'installation, pour aller vérifier
+// https://vpn.<domaine>/.well-known/assetlinks.json : il est donc fixé ici,
+// par -PdomaineInvitation=exemple.fr (ou gradle.properties), sinon par
+// DOMAINE dans le .env à la racine du dépôt. Sans domaine, pas de lien https :
+// restent cybersas:// et le collage. La démo ne réclame jamais ces liens,
+// qui ouvriraient sinon la démo à la place de la vraie appli.
+val domaineInvitation: String? = run {
+    val propriete = (project.findProperty("domaineInvitation") as String?)?.trim()
+    if (!propriete.isNullOrEmpty()) return@run propriete
+    val env = rootProject.file("../../.env")
+    if (!env.exists()) return@run null
+    env.readLines()
+        .map { it.trim() }
+        .lastOrNull { it.startsWith("DOMAINE=") }
+        ?.substringAfter("=")
+        ?.trim()
+        ?.trim('"', '\'')
+        ?.takeIf { it.isNotEmpty() }
+}?.lowercase()
+if (domaineInvitation != null && !Regex("""^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$""").matches(domaineInvitation)) {
+    throw GradleException("domaineInvitation illisible : « $domaineInvitation » (attendu : exemple.fr)")
+}
+val hoteInvitation = if (demo || domaineInvitation == null) null else "vpn.$domaineInvitation"
+
 android {
     namespace = "fr.cybersas.cybersas"
     compileSdk = flutter.compileSdkVersion
@@ -56,6 +81,7 @@ android {
         resValue("string", "app_name", if (demo) "CyberSAS démo" else "CyberSAS")
         // La démo ne doit pas intercepter les vraies invitations.
         manifestPlaceholders["schemaInvitation"] = if (demo) "cybersasdemo" else "cybersas"
+        manifestPlaceholders["hoteInvitation"] = hoteInvitation ?: ""
         // Android 11 au moins : le coffre de la clé du verrou demande une
         // empreinte par opération (setUserAuthenticationParameters), qui
         // n'existe qu'à partir de l'API 30.
@@ -83,6 +109,15 @@ android {
             // configuration de débogage ne sert qu'à laisser Gradle évaluer
             // le projet pour les tâches de débogage.
             signingConfig = signingConfigs.getByName(if (clePresente) "publication" else "debug")
+        }
+    }
+}
+
+// Le filtre des liens https n'existe que si l'hôte est connu (voir plus haut).
+if (hoteInvitation != null) {
+    androidComponents {
+        onVariants { variante ->
+            variante.sources.manifests.addStaticManifestFile("src/liens/AndroidManifest.xml")
         }
     }
 }

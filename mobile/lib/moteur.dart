@@ -205,7 +205,8 @@ abstract final class Moteur {
 }
 
 /// Une invitation : ce que « sas.sh invitation » donne, sous forme de lien
-///   cybersas://rejoindre?serveur=…&cle=…&verrou=…[&autorite=…]
+///   https://vpn.exemple.fr/rejoindre#serveur=…&cle=…&verrou=…[&autorite=…]
+/// (ou, plus ancien, cybersas://rejoindre?serveur=…).
 class Invitation {
   const Invitation({required this.serveur, required this.cle, this.verrou = '', this.autorite = ''});
 
@@ -225,10 +226,32 @@ class Invitation {
   /// L'autorité du labo, en PEM ; vide avec un vrai certificat.
   final String autorite;
 
+  /// Trois formes :
+  ///   https://vpn.exemple.fr/rejoindre#serveur=…&cle=…&verrou=…
+  ///   cybersas://rejoindre?serveur=…&cle=…&verrou=…
+  /// et l'une ou l'autre collée à la main. La forme https ne se lit que
+  /// dans le fragment, que le navigateur n'envoie jamais au serveur : des
+  /// paramètres dans la requête (?serveur=…) sont refusés, comme un lien
+  /// dont l'hôte n'est pas celui du serveur qu'il annonce.
   static Invitation? lire(String texte) {
     final u = Uri.tryParse(texte.trim());
-    if (u == null || u.scheme != 'cybersas' || u.host != 'rejoindre') return null;
-    final p = u.queryParameters;
+    if (u == null) return null;
+    final Map<String, String> p;
+    if (u.scheme == 'cybersas' && u.host == 'rejoindre') {
+      p = u.queryParameters;
+    } else if (u.scheme == 'https' && u.path == '/rejoindre' && !u.hasQuery && u.userInfo.isEmpty && u.hasFragment) {
+      try {
+        p = Uri.splitQueryString(u.fragment);
+      } on ArgumentError {
+        return null;
+      } on FormatException {
+        return null;
+      }
+      final s = Uri.tryParse(p['serveur'] ?? '');
+      if (s == null || s.scheme != 'https' || s.host.isEmpty || s.userInfo.isNotEmpty || s.host != u.host || s.port != u.port) return null;
+    } else {
+      return null;
+    }
     final serveur = p['serveur'] ?? '';
     final cle = p['cle'] ?? '';
     // Sans clé, le lien du réseau doit au moins donner le verrou : c'est

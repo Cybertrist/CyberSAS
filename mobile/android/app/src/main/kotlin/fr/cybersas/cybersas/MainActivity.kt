@@ -34,9 +34,11 @@ class MainActivity : FlutterFragmentActivity() {
     // Une seule invite d'empreinte à la fois.
     private var inviteOuverte = false
 
-    // Le lien d'invitation (cybersas://rejoindre?...) qui a ouvert l'appli.
+    // Le lien d'invitation qui a ouvert l'appli : cybersas://rejoindre?...
+    // ou https://vpn.…/rejoindre#... (App Link). Flutter le relit en entier
+    // (Invitation.lire), et vérifie l'hôte ; ici, on ne fait que trier.
     private fun lien(intent: Intent?): String? =
-        intent?.data?.takeIf { it.scheme == "cybersas" }?.toString()
+        intent?.data?.takeIf { it.scheme == "cybersas" || (it.scheme == "https" && it.path == "/rejoindre") }?.toString()
 
     companion object {
         private const val AUTORISATION_VPN = 42

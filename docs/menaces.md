@@ -44,10 +44,11 @@ C'est le cas le plus grave. Grâce au bout en bout et au verrou, il reste borné
 
 <img src="schemas/verrou.svg" alt="Un serveur piraté glisse un intrus dans le réseau : le téléphone fold8-tristan vérifie le certificat, ne trouve pas de signature du verrou, et le refuse. L'ordinateur laptop-lea, signé par le verrou, est accepté." width="100%">
 
-Deux points à savoir :
+Trois points à savoir :
 
 - Un appareil qui n'a jamais vu une nouvelle révocation ne peut pas l'appliquer : c'est la raison d'être de l'expiration des certificats.
 - Pour les pages publiées sur `maison.`, le TLS se termine sur le VPS. Passer par le VPN plutôt que par la page publique garde le chiffrement de bout en bout.
+- Un lien d'invitation `https://vpn.…/rejoindre#…` qu'Android ouvre dans l'appli (App Link vérifié) ne passe pas par le serveur : ce qu'il porte est après le `#`, que rien n'envoie au réseau. Mais quand l'appli n'est pas installée ou le lien pas vérifié, c'est la page de secours `/rejoindre` qui s'affiche, et elle est servie par le serveur : piraté, il pourrait y changer le verrou avant de rouvrir l'appli. L'écran de connexion montre l'empreinte du verrou avant de rejoindre : la comparer avec celle que l'admin voit dans ses réglages, comme pour un lien collé.
 
 <a name="si-le-telephone-est-vole"></a>
 <img src="sections/menaces/s05.png" alt="05 Si le téléphone de l'admin est volé" width="100%">

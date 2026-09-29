@@ -1,0 +1,122 @@
+<!doctype html>
+<!-- La page de secours des invitations : https://vpn.<DOMAINE>/rejoindre#…
+     Quand l'appli est installée et le lien vérifié (App Links), Android
+     l'ouvre directement et cette page n'est jamais montrée. Sinon, elle lit
+     le fragment ici, dans le navigateur (il n'est jamais envoyé au serveur),
+     et propose d'ouvrir l'appli, de l'installer ou de copier le lien.
+     Aucune ressource externe. Nginx la sert avec une CSP qui n'autorise que
+     le style et le script ci-dessous, par leur empreinte SHA-256 : après
+     toute modification de l'un d'eux, recalculer les empreintes dans
+     nginx/modeles/vpn.conf.template (la commande y est). -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>Rejoindre un réseau CyberSAS</title>
+<style>
+:root{--fond:#04060A;--carte:#0C1117;--bordure:#2A333D;--texte:#F1F5F9;--secondaire:#94A3B0;--tertiaire:#7C8894;--cyan:#31E7FD;--bleu:#01B9FD;--rouge:#FF6B6B}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--fond);color:var(--texte)}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;line-height:1.45;background:radial-gradient(ellipse 70% 34% at 50% 18%,rgba(1,185,253,.18),rgba(1,185,253,0)) no-repeat,var(--fond)}
+main{max-width:440px;margin:0 auto;padding:48px 20px 32px}
+.marque{text-align:center;font-weight:800;font-size:40px;letter-spacing:-.5px;margin:0}
+.marque span{color:var(--cyan)}
+.sous{text-align:center;color:var(--secondaire);font-size:14px;margin:8px 0 28px}
+.carte{background:rgba(12,17,23,.75);border:1px solid var(--bordure);border-radius:18px;padding:18px}
+.carte h1{font-size:17px;margin:0 0 8px}
+.carte p{margin:0;color:var(--secondaire);font-size:14px}
+.ligne{display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:14px}
+.ligne b{font-weight:600;overflow-wrap:anywhere;text-align:right}
+.ligne span{color:var(--secondaire)}
+.bouton{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;margin-top:14px;border-radius:18px;font-family:inherit;font-size:16px;font-weight:600;line-height:1.2;text-decoration:none;cursor:pointer}
+.principal{background:var(--texte);color:var(--fond);border:0;box-shadow:0 10px 30px -12px rgba(49,231,253,.45)}
+.contour{background:rgba(1,185,253,.06);color:var(--texte);border:1px solid var(--cyan)}
+.fantome{background:none;color:var(--secondaire);border:1px solid var(--bordure)}
+.bouton:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.aide{color:var(--tertiaire);font-size:13px;margin:18px 2px 0}
+.aide b{color:var(--secondaire);font-weight:600}
+.erreur{border-color:rgba(255,107,107,.45)}
+.erreur h1{color:var(--rouge)}
+.cache{display:none}
+</style>
+</head>
+<body>
+<main>
+  <p class="marque">Cyber<span>SAS</span></p>
+  <p class="sous">Relie tes appareils entre eux, chiffré de bout en bout.</p>
+
+  <div class="carte" id="carte">
+    <h1 id="titre">Une invitation t'attend</h1>
+    <p id="texte">Ce lien s'ouvre dans l'appli CyberSAS, sur ton téléphone Android.</p>
+    <div class="ligne cache" id="ligne-serveur"><span>Serveur</span><b id="serveur"></b></div>
+    <div class="ligne cache" id="ligne-entree"><span>Entrée</span><b id="entree"></b></div>
+  </div>
+
+  <div id="actions">
+    <a class="bouton principal" id="ouvrir" href="#">Ouvrir dans CyberSAS</a>
+    <a class="bouton contour" href="https://github.com/Cybertrist/CyberSAS/releases/latest" rel="noreferrer">Installer l'appli</a>
+    <p class="aide">L'appli est installée mais ce lien s'ouvre ici ? <b>Réglages Android &gt; Applis &gt; CyberSAS &gt; Ouvrir par défaut &gt; Ajouter un lien</b></p>
+    <button class="bouton fantome" id="copier" type="button">Copier le lien</button>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  // Un autre lien ouvert dans le même onglet ne change que le fragment :
+  // on relit tout.
+  window.addEventListener("hashchange", function () { location.reload(); });
+  var noms = ["serveur", "cle", "verrou", "autorite"];
+  var lu = new URLSearchParams(location.hash.slice(1));
+  var garde = new URLSearchParams();
+  noms.forEach(function (n) {
+    var v = lu.get(n);
+    if (v) garde.set(n, v);
+  });
+  // Le même contrôle que l'appli : un serveur en https, sur l'hôte de
+  // cette page, et au moins une clé d'inscription ou le verrou.
+  var serveur = garde.get("serveur") || "";
+  var hote = "";
+  try {
+    var u = new URL(serveur);
+    if (u.protocol === "https:" && !u.username && !u.password) hote = u.host;
+  } catch (e) {}
+  var valide = hote !== "" && hote === location.host && (garde.has("cle") || garde.has("verrou"));
+
+  function texte(id, t) { document.getElementById(id).textContent = t; }
+
+  if (!valide) {
+    document.getElementById("carte").classList.add("erreur");
+    texte("titre", "Lien incomplet");
+    texte("texte", "Ce lien d'invitation est coupé ou abîmé. Demande à l'admin de te le renvoyer, en entier.");
+    document.getElementById("ouvrir").classList.add("cache");
+    document.getElementById("copier").classList.add("cache");
+    return;
+  }
+
+  texte("serveur", hote);
+  texte("entree", garde.has("cle") ? "invitation à usage unique" : "compte Google de l'équipe");
+  document.getElementById("ligne-serveur").classList.remove("cache");
+  document.getElementById("ligne-entree").classList.remove("cache");
+
+  // intent:// : Chrome ouvre l'appli avec cybersas://rejoindre?…, et va
+  // aux versions publiées si elle n'est pas installée.
+  var publiees = "https://github.com/Cybertrist/CyberSAS/releases/latest";
+  document.getElementById("ouvrir").href = "intent://rejoindre?" + garde.toString() +
+    "#Intent;scheme=cybersas;package=fr.cybersas.cybersas;S.browser_fallback_url=" + encodeURIComponent(publiees) + ";end";
+
+  var bouton = document.getElementById("copier");
+  bouton.addEventListener("click", function () {
+    var lien = location.origin + "/rejoindre#" + garde.toString();
+    function fait() { bouton.textContent = "Lien copié : colle-le dans l'appli"; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lien).then(fait, function () { bouton.textContent = "Copie impossible : copie l'adresse de la page"; });
+    } else {
+      bouton.textContent = "Copie impossible : copie l'adresse de la page";
+    }
+  });
+})();
+</script>
+</body>
+</html>

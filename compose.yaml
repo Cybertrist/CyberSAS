@@ -110,9 +110,13 @@ services:
     tmpfs: [/etc/nginx/conf.d, /var/cache/nginx, /var/run, /tmp]
     environment:
       DOMAINE: ${DOMAINE}
-      # Seule DOMAINE est remplacée dans les modèles : $server_name et les
-      # autres variables de Nginx restent intactes.
-      NGINX_ENVSUBST_FILTER: "^DOMAINE$$"
+      # L'empreinte SHA-256 du certificat qui signe l'appli publiée, pour
+      # /.well-known/assetlinks.json (App Links). Un fork signé par sa
+      # propre clé la change dans .env.
+      EMPREINTE_APPLI: ${EMPREINTE_APPLI:-C2:8F:5B:BC:18:E0:AD:95:71:53:10:F4:DC:9C:AD:12:84:1B:89:62:4F:04:DE:72:97:AB:80:EE:67:F2:E1:18}
+      # Seules DOMAINE et EMPREINTE_APPLI sont remplacées dans les modèles :
+      # $server_name et les autres variables de Nginx restent intactes.
+      NGINX_ENVSUBST_FILTER: "^(DOMAINE|EMPREINTE_APPLI)$$"
       # Les modèles ne sont lus qu'au démarrage de Nginx. sas.sh met ici
       # l'empreinte de nginx/ : quand un fichier change, elle change, et
       # compose recrée le conteneur au lieu de garder l'ancienne config.
@@ -120,6 +124,7 @@ services:
     volumes:
       - ./nginx/modeles:/etc/nginx/templates:ro
       - ./nginx/extraits:/etc/nginx/extraits:ro
+      - ./nginx/pages:/etc/nginx/pages:ro
       - ./etat/tls:/etc/nginx/tls:ro
       - journaux-nginx:/var/log/nginx
 

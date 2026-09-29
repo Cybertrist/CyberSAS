@@ -1,5 +1,7 @@
-# vpn : l'API de sasd, où les appareils s'inscrivent. Le tunnel lui-même ne
-# passe pas par ici : il arrive en UDP, directement sur sasd.
+# vpn : l'API de sasd, où les appareils s'inscrivent, et les liens
+# d'invitation https://vpn.…/rejoindre (App Links et page de secours).
+# Le tunnel lui-même ne passe pas par ici : il arrive en UDP, directement
+# sur sasd.
 server {
     listen 443 ssl;
     http2 on;
@@ -31,6 +33,40 @@ server {
         client_max_body_size 16k;
         include /etc/nginx/extraits/proxy.conf;
         proxy_pass $sasd;
+    }
+
+    # Android vérifie ici que l'appli fr.cybersas.cybersas peut ouvrir les
+    # liens https://vpn.…/rejoindre (App Links) : l'empreinte SHA-256 du
+    # certificat qui signe l'appli publiée, EMPREINTE_APPLI dans .env (sa
+    # valeur par défaut est dans compose.yaml). Pas de redirection
+    # possible : Android n'en suit aucune pour ce fichier.
+    location = /.well-known/assetlinks.json {
+        limit_req zone=api burst=20 nodelay;
+        default_type application/json;
+        return 200 '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"fr.cybersas.cybersas","sha256_cert_fingerprints":["${EMPREINTE_APPLI}"]}}]\n';
+    }
+
+    # La page de secours des invitations (nginx/pages/rejoindre.html),
+    # quand Android n'a pas ouvert le lien dans l'appli. Le fragment, qui
+    # porte la clé d'inscription, reste dans le navigateur : Nginx ne voit
+    # et ne journalise que « GET /rejoindre ».
+    #
+    # La CSP n'autorise que le style et le script de la page, par leur
+    # empreinte. À recalculer après toute modification de la page :
+    #   { printf '\n'; awk '/<style>/{f=1;next}/<\/style>/{f=0}f' nginx/pages/rejoindre.html; } | openssl dgst -sha256 -binary | base64
+    #   { printf '\n'; awk '/<script>/{f=1;next}/<\/script>/{f=0}f' nginx/pages/rejoindre.html; } | openssl dgst -sha256 -binary | base64
+    location = /rejoindre {
+        limit_req zone=api burst=20 nodelay;
+        root /etc/nginx/pages;
+        try_files /rejoindre.html =404;
+        charset utf-8;
+        # Un add_header ici remplace ceux de tls.conf : on les redonne tous.
+        add_header Strict-Transport-Security "max-age=63072000" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Cache-Control "no-store" always;
+        add_header Content-Security-Policy "default-src 'none'; style-src 'sha256-CUPews8BJhqu99RSasQhgnpqVIc3G4hOLk903WLOptw='; script-src 'sha256-Ci1wqHRhF/vlsd00BUj9ZQfvNkQwrv/6CWHcpqmwQx4='; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
     }
 
     location / { return 404; }

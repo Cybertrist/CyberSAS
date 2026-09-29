@@ -222,7 +222,7 @@ func Reseau(dossier string) (string, error) {
 }
 
 // Inviter : un lien d'invitation pour un membre de l'équipe, comme
-// « sas.sh invitation » : cybersas://rejoindre?serveur=…&cle=…&verrou=…
+// « sas.sh invitation » : https://vpn.…/rejoindre#serveur=…&cle=…&verrou=…
 // (et l'autorité du labo, s'il y en a une). La clé vaut minutes minutes,
 // une seule fois.
 func Inviter(dossier, utilisateur string, minutes int) (string, error) {
@@ -234,7 +234,7 @@ func Inviter(dossier, utilisateur string, minutes int) (string, error) {
 	if err := appel(dossier, "POST", protocole.CheminInvitation, protocole.DemandeInvitation{Utilisateur: utilisateur, Minutes: minutes}, &r); err != nil {
 		return "", err
 	}
-	return lienRejoindre(e, r.Cle), nil
+	return lienRejoindre(e, r.Cle)
 }
 
 // EnCours : une invitation pas encore utilisée, pour l'écran de l'admin.
@@ -291,11 +291,21 @@ func LienReseau(dossier string) (string, error) {
 	if err != nil {
 		return "", errors.New("pas inscrit")
 	}
-	return lienRejoindre(e, ""), nil
+	return lienRejoindre(e, "")
 }
 
-// lienRejoindre : cybersas://rejoindre, avec ou sans clé d'inscription.
-func lienRejoindre(e appareil.Etat, cle string) string {
+// lienRejoindre : https://<hôte du serveur>/rejoindre#serveur=…&verrou=…,
+// avec ou sans clé d'inscription. Un lien https, pour que WhatsApp, Gmail
+// ou les SMS le rendent cliquable, et qu'Android l'ouvre dans l'appli (App
+// Link vérifié par /.well-known/assetlinks.json). Tout est dans le
+// fragment : un navigateur ne l'envoie jamais au serveur, qui ne peut donc
+// ni journaliser la clé ni la voir passer. L'hôte est celui du serveur
+// annoncé : l'appli refuse un lien dont l'hôte diffère.
+func lienRejoindre(e appareil.Etat, cle string) (string, error) {
+	s, err := url.Parse(e.Serveur)
+	if err != nil || s.Scheme != "https" || s.Host == "" || s.User != nil {
+		return "", errors.New("adresse du serveur illisible")
+	}
 	v := url.Values{"serveur": {e.Serveur}, "verrou": {e.Retenu.Verrou}}
 	if cle != "" {
 		v.Set("cle", cle)
@@ -303,7 +313,7 @@ func lienRejoindre(e appareil.Etat, cle string) string {
 	if e.Autorite != "" {
 		v.Set("autorite", base64.StdEncoding.EncodeToString([]byte(e.Autorite)))
 	}
-	return "cybersas://rejoindre?" + v.Encode()
+	return "https://" + s.Host + "/rejoindre#" + v.Encode(), nil
 }
 
 // Revoquer ajoute les clés (séparées par des virgules) à la liste de

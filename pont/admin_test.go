@@ -167,7 +167,8 @@ func TestRevoquerIgnoreUneListeForgee(t *testing.T) {
 }
 
 // Le lien du réseau porte le serveur, le verrou et l'autorité, jamais de
-// clé d'inscription : il peut circuler sans faire entrer personne.
+// clé d'inscription : il peut circuler sans faire entrer personne. C'est un
+// lien https vers l'hôte du serveur, tout dans le fragment.
 func TestLienReseau(t *testing.T) {
 	dossier, _, _, pub := banc(t)
 	lien, err := LienReseau(dossier)
@@ -175,15 +176,46 @@ func TestLienReseau(t *testing.T) {
 		t.Fatal(err)
 	}
 	u, err := url.Parse(lien)
-	if err != nil || u.Scheme != "cybersas" || u.Host != "rejoindre" {
+	if err != nil || u.Scheme != "https" || u.Path != "/rejoindre" || u.RawQuery != "" || u.Fragment == "" {
 		t.Fatalf("lien illisible : %q", lien)
 	}
-	q := u.Query()
+	q, err := url.ParseQuery(u.EscapedFragment())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if q.Has("cle") {
 		t.Fatal("le lien du réseau ne doit pas porter de clé d'inscription")
 	}
 	if q.Get("verrou") != base64.StdEncoding.EncodeToString(pub) || !strings.HasPrefix(q.Get("serveur"), "https://") || q.Get("autorite") == "" {
 		t.Fatalf("lien incomplet : %q", lien)
+	}
+	if s, _ := url.Parse(q.Get("serveur")); s == nil || s.Host != u.Host {
+		t.Fatalf("l'hôte du lien %q n'est pas celui du serveur %q", u.Host, q.Get("serveur"))
+	}
+}
+
+// Le lien d'invitation : https://<hôte du serveur>/rejoindre#…, la clé
+// d'inscription dans le fragment, que le navigateur n'envoie jamais au
+// serveur. Une adresse de serveur qui n'est pas https, ou qui cache un
+// identifiant avant l'hôte, ne donne aucun lien.
+func TestLienRejoindre(t *testing.T) {
+	e := appareil.Etat{Serveur: "https://vpn.exemple.fr:8443", Retenu: client.Retenu{Verrou: "DkF6TQ+/="}}
+	lien, err := lienRejoindre(e, "sas-a b&c#d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(lien, "https://vpn.exemple.fr:8443/rejoindre#") || strings.Contains(lien, "?") {
+		t.Fatalf("forme : %q", lien)
+	}
+	u, _ := url.Parse(lien)
+	q, err := url.ParseQuery(u.EscapedFragment())
+	if err != nil || q.Get("cle") != "sas-a b&c#d" || q.Get("verrou") != "DkF6TQ+/=" || q.Get("serveur") != e.Serveur || q.Has("autorite") {
+		t.Fatalf("paramètres : %v, %v", q, err)
+	}
+	for _, s := range []string{"http://vpn.exemple.fr", "https://moi@vpn.exemple.fr", "cybersas://rejoindre", "https://", "::"} {
+		if l, err := lienRejoindre(appareil.Etat{Serveur: s}, "sas-x"); err == nil {
+			t.Errorf("serveur %q accepté : %q", s, l)
+		}
 	}
 }
 

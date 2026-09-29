@@ -1,0 +1,22 @@
+<!-- Les invitations en https (Android App Links) :
+       https://vpn.<DOMAINE>/rejoindre#serveur=…&cle=…&verrou=…
+     WhatsApp, Gmail ou les SMS rendent ce lien cliquable, ce qu'ils ne font
+     pas d'un cybersas://. autoVerify : Android lit
+     https://vpn.<DOMAINE>/.well-known/assetlinks.json (servi par Nginx) et,
+     si l'empreinte du certificat de publication y est, ouvre le lien ici
+     sans passer par le navigateur. build.gradle.kts n'ajoute ce manifeste
+     que si le domaine est connu, et jamais à la démo. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name="fr.cybersas.cybersas.MainActivity">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="${hoteInvitation}"/>
+                <data android:path="/rejoindre"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

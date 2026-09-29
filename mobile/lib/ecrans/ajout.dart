@@ -252,7 +252,8 @@ class _Pastille extends StatelessWidget {
 }
 
 /// La vraie invitation : l'admin dit pour qui et pour combien de temps, le
-/// serveur crée la clé, et le téléphone en fait le lien cybersas://.
+/// serveur crée la clé, et le moteur en fait le lien https://vpn.…/rejoindre,
+/// qui ouvre l'appli d'un appui.
 class _AjoutReel extends StatefulWidget {
   const _AjoutReel();
 
@@ -350,7 +351,7 @@ class _AjoutReelState extends State<_AjoutReel> {
           Text("Seul un admin peut inviter", style: texte(16, graisse: 600)),
           const SizedBox(height: 8),
           Text(
-            "Demande une invitation à l'admin du réseau : un lien cybersas:// à ouvrir sur le nouvel appareil.",
+            "Demande une invitation à l'admin du réseau : un lien à ouvrir sur le nouvel appareil.",
             style: texte(13.5, couleur: Couleurs.secondaire, hauteur: 1.45),
           ),
         ]),

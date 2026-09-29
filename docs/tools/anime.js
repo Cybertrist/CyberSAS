@@ -124,7 +124,7 @@ ${bulle(mai, 'DÉCHIFFRÉ, À LA MAISON', [['GET / HTTP/1.1'], ['Host: maison.sa
   const etapes = [
     ['adm', 'srv', 'Créer l’invitation · alice@gmail.com, 1 h', 'VERT'],
     ['srv', 'adm', 'une clé d’inscription, à usage unique', 'BLEU'],
-    ['adm', 'app', 'le lien cybersas:// · serveur, clé, clé du verrou', 'VERT'],
+    ['adm', 'app', 'le lien https://vpn…/rejoindre · serveur, clé, verrou', 'VERT'],
     ['app', 'app', 'crée sa paire de clés : la privée ne sort pas', 'CYAN', P.cle],
     ['app', 'srv', 'inscription + preuve de possession', 'CYAN'],
     ['srv', 'adm', 'une demande · empreinte Qm7X-tR2k-9vLp', 'BLEU'],
@@ -176,7 +176,7 @@ ${entete(1280, 'UN NOUVEL APPAREIL, DE L’INVITATION AU RÉSEAU', 'La clé priv
 ${lignes}
 ${tetes.join('')}
 ${messages}`;
-  svg('inscription.svg', 1280, h, corps, "Un nouvel appareil rejoint le réseau, en dix messages entre trois acteurs : le nouvel appareil, le serveur sasd et le téléphone de l'admin. 01 l'admin crée une invitation pour alice@gmail.com, valable une heure ; 02 le serveur rend une clé d'inscription à usage unique ; 03 l'admin envoie le lien cybersas:// avec le serveur, la clé et la clé du verrou ; 04 l'appareil crée sa paire de clés, la privée ne sort pas ; 05 il s'inscrit avec une preuve de possession ; 06 le serveur présente la demande à l'admin avec l'empreinte Qm7X-tR2k-9vLp ; 07 l'admin compare l'empreinte et signe au doigt ; 08 le certificat signé part au serveur ; 09 le serveur donne le réseau et les certificats à l'appareil ; 10 l'appareil est dans le réseau, en 10.77.0.3, pour 90 jours.");
+  svg('inscription.svg', 1280, h, corps, "Un nouvel appareil rejoint le réseau, en dix messages entre trois acteurs : le nouvel appareil, le serveur sasd et le téléphone de l'admin. 01 l'admin crée une invitation pour alice@gmail.com, valable une heure ; 02 le serveur rend une clé d'inscription à usage unique ; 03 l'admin envoie le lien https://vpn…/rejoindre avec le serveur, la clé et la clé du verrou ; 04 l'appareil crée sa paire de clés, la privée ne sort pas ; 05 il s'inscrit avec une preuve de possession ; 06 le serveur présente la demande à l'admin avec l'empreinte Qm7X-tR2k-9vLp ; 07 l'admin compare l'empreinte et signe au doigt ; 08 le certificat signé part au serveur ; 09 le serveur donne le réseau et les certificats à l'appareil ; 10 l'appareil est dans le réseau, en 10.77.0.3, pour 90 jours.");
 }
 
 // -------------------------------------------------------- 4. le verrou

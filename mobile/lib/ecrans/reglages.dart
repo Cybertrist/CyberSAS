@@ -411,6 +411,11 @@ class _Reseau extends StatelessWidget {
             dense: true,
           ),
         LigneReglage(ico: Ico.serveurLigne, libelle: 'Serveur', valeur: r.serveur, dense: true),
+        // L'empreinte du verrou retenu : celle qu'un nouvel appareil voit
+        // avant de rejoindre, et qu'il compare avec celle-ci. Un lien passé
+        // par la page de secours du serveur a pu être changé en route.
+        if (r.empreinteVerrou.isNotEmpty)
+          LigneReglage(ico: Ico.bouclier, libelle: 'Verrou', valeur: r.empreinteVerrou, valeurMono: true, dense: true),
         LigneReglage(ico: Ico.globe, libelle: 'Plage', valeur: r.plage, valeurMono: true, dense: true),
         LigneReglage(ico: Ico.cadenas, libelle: 'Chiffrement', valeur: r.protocole, dense: true),
         const LigneReglage(ico: Ico.info, libelle: 'Version', valeur: versionAppli, valeurMono: true, separateur: false, dense: true),
